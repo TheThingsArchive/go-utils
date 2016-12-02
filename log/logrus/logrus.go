@@ -47,6 +47,6 @@ func (w *logrusEntryWrapper) WithField(k string, v interface{}) log.Interface {
 	return &logrusEntryWrapper{w.Entry.WithField(k, v)}
 }
 
-func (w *logrusEntryWrapper) WithFields(fields map[string]interface{}) log.Interface {
-	return &logrusEntryWrapper{w.Entry.WithFields(fields)}
+func (w *logrusEntryWrapper) WithFields(fields log.Fields) log.Interface {
+	return &logrusEntryWrapper{w.Entry.WithFields(logrus.Fields(fields))}
 }

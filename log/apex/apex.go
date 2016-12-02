@@ -18,7 +18,7 @@ func (w *apexInterfaceWrapper) WithField(k string, v interface{}) log.Interface 
 	return &apexEntryWrapper{w.Interface.WithField(k, v)}
 }
 
-func (w *apexInterfaceWrapper) WithFields(fields map[string]interface{}) log.Interface {
+func (w *apexInterfaceWrapper) WithFields(fields log.Fields) log.Interface {
 	return &apexEntryWrapper{w.Interface.WithFields(apex.Fields(fields))}
 }
 
@@ -34,7 +34,7 @@ func (w *apexEntryWrapper) WithField(k string, v interface{}) log.Interface {
 	return &apexEntryWrapper{w.Entry.WithField(k, v)}
 }
 
-func (w *apexEntryWrapper) WithFields(fields map[string]interface{}) log.Interface {
+func (w *apexEntryWrapper) WithFields(fields log.Fields) log.Interface {
 	return &apexEntryWrapper{w.Entry.WithFields(apex.Fields(fields))}
 }
 
