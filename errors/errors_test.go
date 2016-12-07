@@ -4,43 +4,43 @@ import (
 	"fmt"
 	"testing"
 
-	. "github.com/smartystreets/assertions"
+	s "github.com/smartystreets/assertions"
 )
 
 func TestErrorWithFields(t *testing.T) {
-	a := New(t)
+	a := s.New(t)
 
-	err := Err(Unknown, "Error")
+	err := New(Unknown, "Error")
 
-	a.So(err.Type(), ShouldEqual, Unknown)
-	a.So(err.Error(), ShouldEqual, "Error")
-	a.So(err.Fields(), ShouldResemble, map[string]interface{}{})
+	a.So(err.Type(), s.ShouldEqual, Unknown)
+	a.So(err.Error(), s.ShouldEqual, "Error")
+	a.So(err.Fields(), s.ShouldResemble, map[string]interface{}{})
 
 	// adding fields to an error returns them as well
-	a.So(err.WithField("foo", "bar").Fields(), ShouldResemble, map[string]interface{}{
+	a.So(err.WithField("foo", "bar").Fields(), s.ShouldResemble, map[string]interface{}{
 		"foo": "bar",
 	})
 
 	// the original error should have no fields
-	a.So(err.Fields(), ShouldResemble, map[string]interface{}{})
+	a.So(err.Fields(), s.ShouldResemble, map[string]interface{}{})
 
 	fmt.Println(ToGRPCError(err))
 }
 
 func TestErrorCause(t *testing.T) {
-	a := New(t)
+	a := s.New(t)
 
-	root := Err(Unknown, "Foo")
-	first := Err(Unknown, "Bar").WithCause(root)
-	second := Err(Unknown, "Baz").WithCause(first)
-	third := Err(Unknown, "Qux").WithCause(second)
+	root := New(Unknown, "Foo")
+	first := New(Unknown, "Bar").WithCause(root)
+	second := New(Unknown, "Baz").WithCause(first)
+	third := New(Unknown, "Qux").WithCause(second)
 
-	a.So(third.Cause(), ShouldEqual, second)
-	a.So(second.Cause(), ShouldEqual, first)
-	a.So(first.Cause(), ShouldEqual, root)
+	a.So(third.Cause(), s.ShouldEqual, second)
+	a.So(second.Cause(), s.ShouldEqual, first)
+	a.So(first.Cause(), s.ShouldEqual, root)
 
-	a.So(RootCause(third), ShouldEqual, root)
-	a.So(RootCause(second), ShouldEqual, root)
-	a.So(RootCause(first), ShouldEqual, root)
-	a.So(RootCause(root), ShouldEqual, root)
+	a.So(RootCause(third), s.ShouldEqual, root)
+	a.So(RootCause(second), s.ShouldEqual, root)
+	a.So(RootCause(first), s.ShouldEqual, root)
+	a.So(RootCause(root), s.ShouldEqual, root)
 }

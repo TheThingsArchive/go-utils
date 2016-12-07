@@ -65,15 +65,19 @@ func (e *ErrorWithFields) Cause() error {
 	return e
 }
 
-func Err(t Type, message string) Error {
+func New(t Type, message string) Error {
 	return &ErrorWithFields{
 		typ:     t,
 		message: message,
 	}
 }
 
-func Errf(t Type, format string, v ...interface{}) Error {
-	return Err(t, fmt.Sprintf(format, v...))
+func Errorf(t Type, format string, v ...interface{}) Error {
+	return New(t, fmt.Sprintf(format, v...))
+}
+
+func From(err error) Error {
+	return New(Unknown, err.Error())
 }
 
 func (e *ErrorWithFields) Fields() map[string]interface{} {

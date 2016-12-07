@@ -55,7 +55,7 @@ func HTTPStatusFromType(typ Type) int {
 
 func FromHTTPStatus(status int) Error {
 	typ := TypeFromHTTPStatus(status)
-	return Err(typ, string(typ))
+	return New(typ, string(typ))
 }
 
 func ToHTTPStatus(err error) int {

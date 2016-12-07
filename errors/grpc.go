@@ -55,7 +55,7 @@ func FromGRPCError(err error) Error {
 	code := grpc.Code(err)
 	desc := grpc.ErrorDesc(err)
 	typ := TypeFromGRPCCode(code)
-	return Err(typ, desc)
+	return New(typ, desc)
 }
 
 func ToGRPCError(err error) error {
