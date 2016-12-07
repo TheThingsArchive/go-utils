@@ -1,6 +1,12 @@
 package errors
 
-import "fmt"
+import (
+	"fmt"
+	"io"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+)
 
 const cause = "cause"
 
@@ -77,6 +83,15 @@ func Errorf(t Type, format string, v ...interface{}) Error {
 }
 
 func From(err error) Error {
+	if code := grpc.Code(err); code != codes.Unknown {
+		desc := grpc.ErrorDesc(err)
+		return New(TypeFromGRPCCode(code), desc)
+	}
+
+	if err == io.EOF {
+		return New(OutOfRange, err.Error())
+	}
+
 	return New(Unknown, err.Error())
 }
 

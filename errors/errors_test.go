@@ -1,8 +1,13 @@
 package errors
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"testing"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 
 	s "github.com/smartystreets/assertions"
 )
@@ -43,4 +48,29 @@ func TestErrorCause(t *testing.T) {
 	a.So(RootCause(second), s.ShouldEqual, root)
 	a.So(RootCause(first), s.ShouldEqual, root)
 	a.So(RootCause(root), s.ShouldEqual, root)
+}
+
+func TestFrom(t *testing.T) {
+	a := s.New(t)
+
+	// io is out of range
+	{
+		err := From(io.EOF)
+		a.So(err.Type(), s.ShouldEqual, OutOfRange)
+		a.So(err.Error(), s.ShouldEqual, io.EOF.Error())
+	}
+
+	// plain error is uknnown
+	{
+		err := From(errors.New("foo"))
+		a.So(err.Type(), s.ShouldEqual, Unknown)
+		a.So(err.Error(), s.ShouldEqual, "foo")
+	}
+
+	// parse grpc code
+	{
+		err := From(grpc.Errorf(codes.Unauthenticated, "derp"))
+		a.So(err.Type(), s.ShouldEqual, Unauthenticated)
+		a.So(err.Error(), s.ShouldEqual, "derp")
+	}
 }
