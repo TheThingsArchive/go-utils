@@ -26,3 +26,21 @@ func TestErrorWithFields(t *testing.T) {
 
 	fmt.Println(ToGRPCError(err))
 }
+
+func TestErrorCause(t *testing.T) {
+	a := New(t)
+
+	root := Err(Unknown, "Foo")
+	first := Err(Unknown, "Bar").WithCause(root)
+	second := Err(Unknown, "Baz").WithCause(first)
+	third := Err(Unknown, "Qux").WithCause(second)
+
+	a.So(third.Cause(), ShouldEqual, second)
+	a.So(second.Cause(), ShouldEqual, first)
+	a.So(first.Cause(), ShouldEqual, root)
+
+	a.So(RootCause(third), ShouldEqual, root)
+	a.So(RootCause(second), ShouldEqual, root)
+	a.So(RootCause(first), ShouldEqual, root)
+	a.So(RootCause(root), ShouldEqual, root)
+}

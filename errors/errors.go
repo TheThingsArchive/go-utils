@@ -8,9 +8,14 @@ type Typeable interface {
 	Type() Type
 }
 
+type Causer interface {
+	Cause() error
+}
+
 type Error interface {
 	error
 	Typeable
+	Causer
 	WithField(string, interface{}) Error
 	WithCause(error) Error
 	Fields() map[string]interface{}
@@ -22,15 +27,15 @@ type ErrorWithFields struct {
 	fields  []map[string]interface{} `json:"fields"`
 }
 
-func (e ErrorWithFields) Type() Type {
+func (e *ErrorWithFields) Type() Type {
 	return e.typ
 }
 
-func (e ErrorWithFields) Error() string {
+func (e *ErrorWithFields) Error() string {
 	return e.message
 }
 
-func (e ErrorWithFields) WithField(name string, val interface{}) Error {
+func (e *ErrorWithFields) WithField(name string, val interface{}) Error {
 	flds := make([]map[string]interface{}, 0, len(e.fields)+1)
 	flds = append(flds, map[string]interface{}{
 		name: val,
@@ -42,11 +47,11 @@ func (e ErrorWithFields) WithField(name string, val interface{}) Error {
 	}
 }
 
-func (e ErrorWithFields) WithCause(err error) Error {
+func (e *ErrorWithFields) WithCause(err error) Error {
 	return e.WithField(cause, err)
 }
 
-func (e ErrorWithFields) Cause() error {
+func (e *ErrorWithFields) Cause() error {
 	// return the first error we find
 	for _, fld := range e.fields {
 		err, ok := fld[cause]
@@ -71,7 +76,7 @@ func Errf(t Type, format string, v ...interface{}) Error {
 	return Err(t, fmt.Sprintf(format, v...))
 }
 
-func (e ErrorWithFields) Fields() map[string]interface{} {
+func (e *ErrorWithFields) Fields() map[string]interface{} {
 	res := make(map[string]interface{})
 
 	for _, flds := range e.fields {
@@ -81,4 +86,17 @@ func (e ErrorWithFields) Fields() map[string]interface{} {
 	}
 
 	return res
+}
+
+func RootCause(err error) error {
+	if causer, ok := err.(Causer); ok {
+		cause := causer.Cause()
+		if e, ok := causer.(error); ok && e == cause {
+			return cause
+		}
+
+		return RootCause(cause)
+	}
+
+	return err
 }
