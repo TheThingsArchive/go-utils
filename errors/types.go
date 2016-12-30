@@ -21,6 +21,9 @@ const (
 	// NotImplemented means action is known but not implemented yet
 	NotImplemented Type = "not implemented"
 
+	// NotSupported means action is known but will not be implemented
+	NotSupported Type = "not supported"
+
 	// Unauthenticated means the client has made no authentication, while it
 	// should have
 	Unauthenticated Type = "unauthenticated"
