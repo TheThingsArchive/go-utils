@@ -19,7 +19,7 @@ func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, 
 		log, reqStr := fn(req, info)
 
 		fields := fieldsFromContext(ctx)
-		fields["method"] = info.FullMethod
+		fields["Method"] = info.FullMethod
 		log = log.WithFields(fields)
 
 		log.Debugf("received %s", reqStr)
@@ -30,7 +30,7 @@ func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, 
 
 		grpcErr := errors.BuildGRPCError(err)
 		code := grpc.Code(grpcErr)
-		log = log.WithField("code", code)
+		log = log.WithField("Code", code)
 
 		if grpcErr != nil {
 			log.WithError(err).Errorf("%s failed", reqStr)
@@ -48,7 +48,7 @@ func Stream(fn func(srv interface{}, info *grpc.StreamServerInfo) (log.Interface
 		log, streamStr := fn(srv, info)
 
 		fields := fieldsFromContext(ss.Context())
-		fields["method"] = info.FullMethod
+		fields["Method"] = info.FullMethod
 		log = log.WithFields(fields)
 
 		log.Debugf("opening a new %s", streamStr)
@@ -59,7 +59,7 @@ func Stream(fn func(srv interface{}, info *grpc.StreamServerInfo) (log.Interface
 
 		grpcErr := errors.BuildGRPCError(err)
 		code := grpc.Code(grpcErr)
-		log = log.WithField("code", code)
+		log = log.WithField("Code", code)
 
 		if grpcErr != nil && code != codes.Canceled {
 			log.WithError(err).Errorf("%s failed", streamStr)
@@ -75,10 +75,10 @@ func fieldsFromContext(ctx context.Context) log.Fields {
 	fields := log.Fields{}
 
 	if peer, ok := peer.FromContext(ctx); ok {
-		fields["ip"] = peer.Addr.String()
+		fields["CallerIP"] = peer.Addr.String()
 
 		if peer.AuthInfo != nil {
-			fields["auth-type"] = peer.AuthInfo.AuthType()
+			fields["Auth-Type"] = peer.AuthInfo.AuthType()
 		}
 	}
 
@@ -88,20 +88,20 @@ func fieldsFromContext(ctx context.Context) log.Fields {
 	}
 
 	if id, err := api.IDFromMetadata(md); err == nil {
-		fields["id"] = id
+		fields["ID"] = id
 	}
 
 	if offset, err := api.OffsetFromMetadata(md); err == nil && offset != 0 {
-		fields["offset"] = offset
+		fields["Offset"] = offset
 	}
 
 	if limit, err := api.LimitFromMetadata(md); err == nil && limit != 0 {
-		fields["limit"] = limit
+		fields["Limit"] = limit
 	}
 
 	return fields
 }
 
 func withDurationSince(log log.Interface, start time.Time) log.Interface {
-	return log.WithField("duration", time.Since(start))
+	return log.WithField("Duration", time.Since(start))
 }
