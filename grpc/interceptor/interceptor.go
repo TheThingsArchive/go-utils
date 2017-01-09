@@ -30,7 +30,7 @@ func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, 
 		code := grpc.Code(grpcErr)
 		log = log.WithField("code", code)
 
-		if grpcErr != nil && code != codes.Canceled {
+		if grpcErr != nil {
 			log.WithError(err).Errorf("%s failed", reqStr)
 		} else {
 			log.Debugf("%s completed", reqStr)
