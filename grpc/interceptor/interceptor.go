@@ -12,6 +12,8 @@ import (
 	"google.golang.org/grpc/peer"
 )
 
+// Unary generates a function usable as an argument to grpc.UnaryServerInterceptor
+// fn should return appropriate log.Interface and request name to use in logging
 func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, string)) func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp interface{}, err error) {
 		log, reqStr := fn(req, info)
@@ -39,6 +41,8 @@ func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, 
 	}
 }
 
+// Stream generates a function usable as an argument to grpc.StreamServerInterceptor
+// fn should return appropriate log.Interface and stream name to use in logging
 func Stream(fn func(srv interface{}, info *grpc.StreamServerInfo) (log.Interface, string)) func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
 	return func(srv interface{}, ss grpc.ServerStream, info *grpc.StreamServerInfo, handler grpc.StreamHandler) (err error) {
 		log, streamStr := fn(srv, info)
