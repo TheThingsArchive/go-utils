@@ -22,7 +22,7 @@ func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, 
 		fields["Method"] = info.FullMethod
 		log = log.WithFields(fields)
 
-		log.Debugf("received %s", reqStr)
+		log.Debugf("Received %s", reqStr)
 
 		start := time.Now()
 		resp, err = handler(ctx, req)
@@ -51,7 +51,7 @@ func Stream(fn func(srv interface{}, info *grpc.StreamServerInfo) (log.Interface
 		fields["Method"] = info.FullMethod
 		log = log.WithFields(fields)
 
-		log.Debugf("opening a new %s", streamStr)
+		log.Debugf("Opening a new %s", streamStr)
 
 		start := time.Now()
 		err = handler(srv, ss)
