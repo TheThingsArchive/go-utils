@@ -100,10 +100,10 @@ func Decode(tagName string, base interface{}, input map[string]string) (output i
 	baseType := reflect.TypeOf(base)
 	// If we get a pointer in, we'll return a pointer out
 	if baseType.Kind() == reflect.Ptr {
-		output = reflect.New(baseType.Elem()).Interface()
-	} else {
-		output = reflect.New(baseType).Interface()
+		baseType = baseType.Elem()
 	}
+	output = reflect.New(baseType).Interface()
+
 	defer func() {
 		if err == nil && baseType.Kind() != reflect.Ptr {
 			output = reflect.Indirect(reflect.ValueOf(output)).Interface()
