@@ -148,8 +148,12 @@ func TestDecode(t *testing.T) {
 		"by pointer": &testStruct{},
 	} {
 		t.Run(name, func(t *testing.T) {
-
 			a := s.New(t)
+
+			if argPtr, ok := arg.(*testStruct); ok {
+				old := *argPtr
+				defer a.So(*argPtr, s.ShouldResemble, old)
+			}
 
 			m := map[string]string{
 				Int:     strconv.Itoa(intVar),
@@ -319,6 +323,12 @@ func TestEncode(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			a := s.New(t)
+
+			if argPtr, ok := arg.(*testStruct); ok {
+				old := *argPtr
+				defer a.So(*argPtr, s.ShouldResemble, old)
+			}
+
 			enc, err := Encode(testTag, arg)
 			a.So(err, s.ShouldBeNil)
 
