@@ -86,13 +86,13 @@ func unmarshalToType(typ reflect.Type, value string) (val interface{}, err error
 func Decode(tagName string, base interface{}, input map[string]string) (output interface{}, err error) {
 	baseType := reflect.TypeOf(base)
 
-	typ := baseType
+	valType := baseType
 	if baseType.Kind() == reflect.Ptr {
-		typ = typ.Elem()
+		valType = valType.Elem()
 	}
 
 	// If we get a pointer in, we'll return a pointer out
-	valPtr := reflect.New(typ)
+	valPtr := reflect.New(valType)
 	val := valPtr.Elem()
 	output = valPtr.Interface()
 
@@ -102,19 +102,19 @@ func Decode(tagName string, base interface{}, input map[string]string) (output i
 		}
 	}()
 
-	for i := 0; i < typ.NumField(); i++ {
-		field := typ.Field(i)
+	for i := 0; i < valType.NumField(); i++ {
+		field := valType.Field(i)
 
 		if field.Anonymous {
 			continue
 		}
 
-		tagName, _ := parseTag(field.Tag.Get(tagName))
-		if tagName == "" || tagName == "-" {
+		tagField, _ := parseTag(field.Tag.Get(tagName))
+		if tagField == "" || tagField == "-" {
 			continue
 		}
 
-		str, ok := input[tagName]
+		str, ok := input[tagField]
 		if !ok || str == "" {
 			continue
 		}
