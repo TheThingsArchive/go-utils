@@ -142,7 +142,7 @@ type testStruct struct {
 	StringArray [2]string `test:"stringArray"`
 }
 
-func TestDecode(t *testing.T) {
+func TestFromStringStringMap(t *testing.T) {
 	for name, arg := range map[string]interface{}{
 		"by value":   testStruct{},
 		"by pointer": &testStruct{},
@@ -195,7 +195,7 @@ func TestDecode(t *testing.T) {
 				StringArray: stringArrayVarString,
 			}
 
-			ret, err := Decode(testTag, arg, m)
+			ret, err := FromStringStringMap(testTag, arg, m)
 			a.So(err, s.ShouldBeNil)
 
 			var v testStruct
@@ -276,46 +276,48 @@ func TestDecode(t *testing.T) {
 	}
 }
 
-func TestEncode(t *testing.T) {
-	v := testStruct{
-		Int:     intVar,
-		Int8:    int8Var,
-		Int16:   int16Var,
-		Int32:   int32Var,
-		Int64:   int64Var,
-		Uint:    uintVar,
-		Uint8:   uint8Var,
-		Uint16:  uint16Var,
-		Uint32:  uint32Var,
-		Uint64:  uint64Var,
-		Float32: float32Var,
-		Float64: float64Var,
-		Bool:    boolVar,
-		String:  stringVar,
+var testStructVar = testStruct{
+	Int:     intVar,
+	Int8:    int8Var,
+	Int16:   int16Var,
+	Int32:   int32Var,
+	Int64:   int64Var,
+	Uint:    uintVar,
+	Uint8:   uint8Var,
+	Uint16:  uint16Var,
+	Uint32:  uint32Var,
+	Uint64:  uint64Var,
+	Float32: float32Var,
+	Float64: float64Var,
+	Bool:    boolVar,
+	String:  stringVar,
 
-		IntPtr:     &intVar,
-		Int8Ptr:    &int8Var,
-		Int16Ptr:   &int16Var,
-		Int32Ptr:   &int32Var,
-		Int64Ptr:   &int64Var,
-		UintPtr:    &uintVar,
-		Uint8Ptr:   &uint8Var,
-		Uint16Ptr:  &uint16Var,
-		Uint32Ptr:  &uint32Var,
-		Uint64Ptr:  &uint64Var,
-		Float32Ptr: &float32Var,
-		Float64Ptr: &float64Var,
-		BoolPtr:    &boolVar,
-		StringPtr:  &stringVar,
+	IntPtr:     &intVar,
+	Int8Ptr:    &int8Var,
+	Int16Ptr:   &int16Var,
+	Int32Ptr:   &int32Var,
+	Int64Ptr:   &int64Var,
+	UintPtr:    &uintVar,
+	Uint8Ptr:   &uint8Var,
+	Uint16Ptr:  &uint16Var,
+	Uint32Ptr:  &uint32Var,
+	Uint64Ptr:  &uint64Var,
+	Float32Ptr: &float32Var,
+	Float64Ptr: &float64Var,
+	BoolPtr:    &boolVar,
+	StringPtr:  &stringVar,
 
-		IntSlice:    intSliceVar,
-		BoolSlice:   boolSliceVar,
-		StringSlice: stringSliceVar,
+	IntSlice:    intSliceVar,
+	BoolSlice:   boolSliceVar,
+	StringSlice: stringSliceVar,
 
-		IntArray:    intArrayVar,
-		BoolArray:   boolArrayVar,
-		StringArray: stringArrayVar,
-	}
+	IntArray:    intArrayVar,
+	BoolArray:   boolArrayVar,
+	StringArray: stringArrayVar,
+}
+
+func TestToStringStringMap(t *testing.T) {
+	v := testStructVar
 
 	for name, arg := range map[string]interface{}{
 		"by value":   v,
@@ -329,7 +331,7 @@ func TestEncode(t *testing.T) {
 				defer a.So(*argPtr, s.ShouldResemble, old)
 			}
 
-			enc, err := Encode(testTag, arg)
+			enc, err := ToStringStringMap(testTag, arg)
 			a.So(err, s.ShouldBeNil)
 
 			a.So(enc[Int], s.ShouldEqual, strconv.FormatInt(int64(v.Int), 10))
@@ -369,6 +371,65 @@ func TestEncode(t *testing.T) {
 			a.So(enc[IntArray], s.ShouldEqual, sliceToString(v.IntArray))
 			a.So(enc[BoolArray], s.ShouldEqual, sliceToString(v.BoolArray))
 			a.So(enc[StringArray], s.ShouldEqual, sliceToString(v.StringArray))
+		})
+	}
+}
+
+func TestToStringInterfaceMap(t *testing.T) {
+	v := testStructVar
+
+	for name, arg := range map[string]interface{}{
+		"by value":   v,
+		"by pointer": &v,
+	} {
+		t.Run(name, func(t *testing.T) {
+			a := s.New(t)
+
+			if argPtr, ok := arg.(*testStruct); ok {
+				old := *argPtr
+				defer a.So(*argPtr, s.ShouldResemble, old)
+			}
+
+			enc, err := ToStringInterfaceMap(testTag, arg)
+			a.So(err, s.ShouldBeNil)
+
+			a.So(enc[Int], s.ShouldEqual, v.Int)
+			a.So(enc[Int8], s.ShouldEqual, v.Int8)
+			a.So(enc[Int16], s.ShouldEqual, v.Int16)
+			a.So(enc[Int32], s.ShouldEqual, v.Int32)
+			a.So(enc[Int64], s.ShouldEqual, v.Int64)
+			a.So(enc[Uint], s.ShouldEqual, v.Uint)
+			a.So(enc[Uint8], s.ShouldEqual, v.Uint8)
+			a.So(enc[Uint16], s.ShouldEqual, v.Uint16)
+			a.So(enc[Uint32], s.ShouldEqual, v.Uint32)
+			a.So(enc[Uint64], s.ShouldEqual, v.Uint64)
+			a.So(enc[Float32], s.ShouldEqual, v.Float32)
+			a.So(enc[Float64], s.ShouldEqual, v.Float64)
+			a.So(enc[Bool], s.ShouldEqual, v.Bool)
+			a.So(enc[String], s.ShouldEqual, v.String)
+
+			a.So(enc[IntPtr], s.ShouldEqual, v.IntPtr)
+			a.So(enc[Int8Ptr], s.ShouldEqual, v.Int8Ptr)
+			a.So(enc[Int16Ptr], s.ShouldEqual, v.Int16Ptr)
+			a.So(enc[Int32Ptr], s.ShouldEqual, v.Int32Ptr)
+			a.So(enc[Int64Ptr], s.ShouldEqual, v.Int64Ptr)
+			a.So(enc[UintPtr], s.ShouldEqual, v.UintPtr)
+			a.So(enc[Uint8Ptr], s.ShouldEqual, v.Uint8Ptr)
+			a.So(enc[Uint16Ptr], s.ShouldEqual, v.Uint16Ptr)
+			a.So(enc[Uint32Ptr], s.ShouldEqual, v.Uint32Ptr)
+			a.So(enc[Uint64Ptr], s.ShouldEqual, v.Uint64Ptr)
+			a.So(enc[Float32Ptr], s.ShouldEqual, v.Float32Ptr)
+			a.So(enc[Float64Ptr], s.ShouldEqual, v.Float64Ptr)
+			a.So(enc[BoolPtr], s.ShouldEqual, v.BoolPtr)
+			a.So(enc[StringPtr], s.ShouldEqual, v.StringPtr)
+
+			a.So(enc[IntSlice], s.ShouldResemble, v.IntSlice)
+			a.So(enc[BoolSlice], s.ShouldResemble, v.BoolSlice)
+			a.So(enc[StringSlice], s.ShouldResemble, v.StringSlice)
+
+			a.So(enc[IntArray], s.ShouldResemble, v.IntArray)
+			a.So(enc[BoolArray], s.ShouldResemble, v.BoolArray)
+			a.So(enc[StringArray], s.ShouldResemble, v.StringArray)
 		})
 	}
 }

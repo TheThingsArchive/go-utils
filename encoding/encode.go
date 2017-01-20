@@ -44,8 +44,8 @@ type isEmptier interface {
 	IsEmpty() bool
 }
 
-// Encode encodes fields tagged with tagName in input into map[string]string. Optional argument properties specifies fields to encode.
-func Encode(tagName string, input interface{}, properties ...string) (map[string]string, error) {
+// ToStringStringMap encodes fields tagged with tagName in input into map[string]string. Optional argument properties specifies fields to encode.
+func ToStringStringMap(tagName string, input interface{}, properties ...string) (map[string]string, error) {
 	vmap := make(map[string]string)
 	s := structs.New(input)
 	s.TagName = tagName
@@ -119,6 +119,48 @@ func Encode(tagName string, input interface{}, properties ...string) (map[string
 		}
 
 		vmap[tagName] = fmt.Sprintf("%v", val)
+	}
+	return vmap, nil
+}
+
+// ToStringInterfaceMap encodes fields tagged with tagName in input into map[string]interface{}. Optional argument properties specifies fields to encode.
+func ToStringInterfaceMap(tagName string, input interface{}, properties ...string) (map[string]interface{}, error) {
+	vmap := make(map[string]interface{})
+	s := structs.New(input)
+	s.TagName = tagName
+	if len(properties) == 0 {
+		properties = s.Names()
+	}
+
+	for _, field := range s.Fields() {
+		if !field.IsExported() {
+			continue
+		}
+
+		if !stringInSlice(field.Name(), properties) {
+			continue
+		}
+
+		tagName, opts := parseTag(field.Tag(tagName))
+		if tagName == "" || tagName == "-" {
+			continue
+		}
+
+		val := field.Value()
+
+		if opts.Has("omitempty") {
+			if field.IsZero() {
+				continue
+			}
+			if z, ok := val.(isZeroer); ok && z.IsZero() {
+				continue
+			}
+			if z, ok := val.(isEmptier); ok && z.IsEmpty() {
+				continue
+			}
+		}
+
+		vmap[tagName] = val
 	}
 	return vmap, nil
 }

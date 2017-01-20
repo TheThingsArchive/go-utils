@@ -83,8 +83,8 @@ func unmarshalToType(typ reflect.Type, value string) (val interface{}, err error
 	return val, fmt.Errorf("No way to unmarshal \"%s\" to %s", value, typ.Name())
 }
 
-// Decode decodes input into output with the same type as base. Only fields tagged by tagName get decoded. Optional argument properties specifies fields to decode.
-func Decode(tagName string, base interface{}, input map[string]string) (output interface{}, err error) {
+// FromStringStringMap decodes input into output with the same type as base. Only fields tagged by tagName get decoded. Optional argument properties specifies fields to decode.
+func FromStringStringMap(tagName string, base interface{}, input map[string]string) (output interface{}, err error) {
 	baseType := reflect.TypeOf(base)
 
 	valType := baseType
