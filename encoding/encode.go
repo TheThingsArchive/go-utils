@@ -44,6 +44,7 @@ type isEmptier interface {
 	IsEmpty() bool
 }
 
+// Encode encodes fields tagged with tagName in input into map[string]string. Optional argument properties specifies fields to encode.
 func Encode(tagName string, input interface{}, properties ...string) (map[string]string, error) {
 	vmap := make(map[string]string)
 	s := structs.New(input)
