@@ -1,12 +1,18 @@
 package encoding
 
 import (
+	"encoding/json"
 	"math"
 	"strconv"
 	"testing"
 
 	s "github.com/smartystreets/assertions"
 )
+
+func sliceToString(v interface{}) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}
 
 var (
 	intVar     int     = 42
@@ -23,6 +29,24 @@ var (
 	float64Var float64 = math.MaxFloat64
 	boolVar    bool    = true
 	stringVar  string  = "test"
+
+	intSliceVar    = []int{4, 2}
+	boolSliceVar   = []bool{true, false}
+	stringSliceVar = []string{"te", "st"}
+
+	intArrayVar    = [2]int{4, 2}
+	boolArrayVar   = [2]bool{true, false}
+	stringArrayVar = [2]string{"te", "st"}
+)
+
+var (
+	intSliceVarString    = sliceToString(intSliceVar)
+	boolSliceVarString   = sliceToString(boolSliceVar)
+	stringSliceVarString = sliceToString(stringSliceVar)
+
+	intArrayVarString    = sliceToString(intArrayVar)
+	boolArrayVarString   = sliceToString(boolArrayVar)
+	stringArrayVarString = sliceToString(stringArrayVar)
 )
 
 const (
@@ -57,6 +81,17 @@ const (
 	Float64Ptr = "float64Ptr"
 	StringPtr  = "stringPtr"
 	BoolPtr    = "boolPtr"
+
+	IntSlice    = "intSlice"
+	BoolSlice   = "boolSlice"
+	StringSlice = "stringSlice"
+
+	IntArray    = "intArray"
+	BoolArray   = "boolArray"
+	StringArray = "stringArray"
+
+	Struct    = "struct"
+	Interface = "interface"
 )
 
 type embStruct struct{}
@@ -95,8 +130,16 @@ type testStruct struct {
 	StringPtr  *string  `test:"stringPtr"`
 	BoolPtr    *bool    `test:"boolPtr"`
 
-	Struct    struct{}
-	Interface interface{}
+	Struct    struct{}    `test:"struct"`
+	Interface interface{} `test:"interface"`
+
+	IntSlice    []int    `test:"intSlice"`
+	BoolSlice   []bool   `test:"boolSlice"`
+	StringSlice []string `test:"stringSlice"`
+
+	IntArray    [2]int    `test:"intArray"`
+	BoolArray   [2]bool   `test:"boolArray"`
+	StringArray [2]string `test:"stringArray"`
 }
 
 func TestDecode(t *testing.T) {
@@ -138,6 +181,14 @@ func TestDecode(t *testing.T) {
 				Float64Ptr: strconv.FormatFloat(float64(float64Var), 'e', 16, 64),
 				StringPtr:  stringVar,
 				BoolPtr:    strconv.FormatBool(boolVar),
+
+				IntSlice:    intSliceVarString,
+				BoolSlice:   boolSliceVarString,
+				StringSlice: stringSliceVarString,
+
+				IntArray:    intArrayVarString,
+				BoolArray:   boolArrayVarString,
+				StringArray: stringArrayVarString,
 			}
 
 			ret, err := Decode(testTag, arg, m)
@@ -209,6 +260,14 @@ func TestDecode(t *testing.T) {
 			if a.So(v.StringPtr, s.ShouldNotBeNil) {
 				a.So(*v.StringPtr, s.ShouldEqual, m[String])
 			}
+
+			a.So(v.IntSlice, s.ShouldResemble, intSliceVar)
+			a.So(v.BoolSlice, s.ShouldResemble, boolSliceVar)
+			a.So(v.StringSlice, s.ShouldResemble, stringSliceVar)
+
+			a.So(v.IntArray, s.ShouldResemble, intArrayVar)
+			a.So(v.BoolArray, s.ShouldResemble, boolArrayVar)
+			a.So(v.StringArray, s.ShouldResemble, stringArrayVar)
 		})
 	}
 }
@@ -244,6 +303,14 @@ func TestEncode(t *testing.T) {
 		Float64Ptr: &float64Var,
 		BoolPtr:    &boolVar,
 		StringPtr:  &stringVar,
+
+		IntSlice:    intSliceVar,
+		BoolSlice:   boolSliceVar,
+		StringSlice: stringSliceVar,
+
+		IntArray:    intArrayVar,
+		BoolArray:   boolArrayVar,
+		StringArray: stringArrayVar,
 	}
 
 	for name, arg := range map[string]interface{}{
@@ -284,6 +351,14 @@ func TestEncode(t *testing.T) {
 			a.So(enc[Float64Ptr], s.ShouldEqual, strconv.FormatFloat(float64(v.Float64), 'e', 16, 64))
 			a.So(enc[BoolPtr], s.ShouldEqual, strconv.FormatBool(v.Bool))
 			a.So(enc[StringPtr], s.ShouldEqual, v.String)
+
+			a.So(enc[IntSlice], s.ShouldEqual, sliceToString(v.IntSlice))
+			a.So(enc[BoolSlice], s.ShouldEqual, sliceToString(v.BoolSlice))
+			a.So(enc[StringSlice], s.ShouldEqual, sliceToString(v.StringSlice))
+
+			a.So(enc[IntArray], s.ShouldEqual, sliceToString(v.IntArray))
+			a.So(enc[BoolArray], s.ShouldEqual, sliceToString(v.BoolArray))
+			a.So(enc[StringArray], s.ShouldEqual, sliceToString(v.StringArray))
 		})
 	}
 }
