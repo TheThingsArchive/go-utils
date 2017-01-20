@@ -44,7 +44,6 @@ type isEmptier interface {
 	IsEmpty() bool
 }
 
-// copied from https://github.com/TheThingsNetwork/ttn/blob/0c101ec124e06b5c33192555c52fd6f35dcefb33/core/storage/encoder.go#L31-L103
 func Encode(tagName string, input interface{}, properties ...string) (map[string]string, error) {
 	vmap := make(map[string]string)
 	s := structs.New(input)
@@ -83,6 +82,9 @@ func Encode(tagName string, input interface{}, properties ...string) (map[string
 
 		if v, ok := val.(string); ok {
 			vmap[tagName] = v
+			continue
+		} else if v, ok := val.(*string); ok {
+			vmap[tagName] = *v
 			continue
 		}
 
