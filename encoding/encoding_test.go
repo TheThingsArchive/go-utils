@@ -25,6 +25,21 @@ const (
 	Float64 = "float64"
 	String  = "string"
 	Bool    = "bool"
+
+	IntPtr     = "intPtr"
+	Int8Ptr    = "int8Ptr"
+	Int16Ptr   = "int16Ptr"
+	Int32Ptr   = "int32Ptr"
+	Int64Ptr   = "int64Ptr"
+	UintPtr    = "uintPtr"
+	Uint8Ptr   = "uint8Ptr"
+	Uint16Ptr  = "uint16Ptr"
+	Uint32Ptr  = "uint32Ptr"
+	Uint64Ptr  = "uint64Ptr"
+	Float32Ptr = "float32Ptr"
+	Float64Ptr = "float64Ptr"
+	StringPtr  = "stringPtr"
+	BoolPtr    = "boolPtr"
 )
 
 type embStruct struct{}
@@ -47,6 +62,21 @@ type testStruct struct {
 	Float64 float64 `test:"float64"`
 	String  string  `test:"string"`
 	Bool    bool    `test:"bool"`
+
+	IntPtr     *int     `test:"intPtr"`
+	Int8Ptr    *int8    `test:"int8Ptr"`
+	Int16Ptr   *int16   `test:"int16Ptr"`
+	Int32Ptr   *int32   `test:"int32Ptr"`
+	Int64Ptr   *int64   `test:"int64Ptr"`
+	UintPtr    *uint    `test:"uintPtr"`
+	Uint8Ptr   *uint    `test:"uint8Ptr"`
+	Uint16Ptr  *uint16  `test:"uint16Ptr"`
+	Uint32Ptr  *uint32  `test:"uint32Ptr"`
+	Uint64Ptr  *uint64  `test:"uint64Ptr"`
+	Float32Ptr *float32 `test:"float32Ptr"`
+	Float64Ptr *float64 `test:"float64Ptr"`
+	StringPtr  *string  `test:"stringPtr"`
+	BoolPtr    *bool    `test:"boolPtr"`
 
 	Struct    struct{}
 	Interface interface{}
@@ -76,6 +106,21 @@ func TestDecode(t *testing.T) {
 				Float64: strconv.FormatFloat(float64(math.MaxFloat64), 'e', 16, 64),
 				String:  "string",
 				Bool:    "bool",
+
+				IntPtr:     strconv.Itoa(42),
+				Int8Ptr:    strconv.FormatInt(int64(math.MaxInt8), 10),
+				Int16Ptr:   strconv.FormatInt(int64(math.MaxInt16), 10),
+				Int32Ptr:   strconv.FormatInt(int64(math.MaxInt32), 10),
+				Int64Ptr:   strconv.FormatInt(int64(math.MaxInt64), 10),
+				UintPtr:    strconv.FormatUint(42, 10),
+				Uint8Ptr:   strconv.FormatUint(uint64(math.MaxUint8), 10),
+				Uint16Ptr:  strconv.FormatUint(uint64(math.MaxUint16), 10),
+				Uint32Ptr:  strconv.FormatUint(uint64(math.MaxUint32), 10),
+				Uint64Ptr:  strconv.FormatUint(uint64(math.MaxUint64), 10),
+				Float32Ptr: strconv.FormatFloat(float64(math.MaxFloat32), 'e', 7, 32),
+				Float64Ptr: strconv.FormatFloat(float64(math.MaxFloat64), 'e', 16, 64),
+				StringPtr:  "string",
+				BoolPtr:    "bool",
 			}
 
 			ret, err := Decode(testTag, arg, m)
@@ -104,6 +149,49 @@ func TestDecode(t *testing.T) {
 			a.So(v.Float64, s.ShouldEqual, func() float64 { val, _ := strconv.ParseFloat(m[Float64], 64); return float64(val) }())
 			a.So(v.Bool, s.ShouldEqual, func() bool { val, _ := strconv.ParseBool(m[Bool]); return bool(val) }())
 			a.So(v.String, s.ShouldEqual, m[String])
+
+			if a.So(v.IntPtr, s.ShouldNotBeNil) {
+				a.So(*v.IntPtr, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[Int], 10, 0); return int(val) }())
+			}
+			if a.So(v.Int8Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Int8Ptr, s.ShouldEqual, func() int8 { val, _ := strconv.ParseInt(m[Int8], 10, 8); return int8(val) }())
+			}
+			if a.So(v.Int16Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Int16Ptr, s.ShouldEqual, func() int16 { val, _ := strconv.ParseInt(m[Int16], 10, 16); return int16(val) }())
+			}
+			if a.So(v.Int32Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Int32Ptr, s.ShouldEqual, func() int32 { val, _ := strconv.ParseInt(m[Int32], 10, 32); return int32(val) }())
+			}
+			if a.So(v.Int64Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Int64Ptr, s.ShouldEqual, func() int64 { val, _ := strconv.ParseInt(m[Int64], 10, 64); return int64(val) }())
+			}
+			if a.So(v.UintPtr, s.ShouldNotBeNil) {
+				a.So(*v.UintPtr, s.ShouldEqual, func() uint { val, _ := strconv.ParseUint(m[Uint], 10, 0); return uint(val) }())
+			}
+			if a.So(v.Uint8Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Uint8Ptr, s.ShouldEqual, func() uint8 { val, _ := strconv.ParseUint(m[Uint8], 10, 8); return uint8(val) }())
+			}
+			if a.So(v.Uint16Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Uint16Ptr, s.ShouldEqual, func() uint16 { val, _ := strconv.ParseUint(m[Uint16], 10, 16); return uint16(val) }())
+			}
+			if a.So(v.Uint32Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Uint32Ptr, s.ShouldEqual, func() uint32 { val, _ := strconv.ParseUint(m[Uint32], 10, 32); return uint32(val) }())
+			}
+			if a.So(v.Uint64Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Uint64Ptr, s.ShouldEqual, func() uint64 { val, _ := strconv.ParseUint(m[Uint64], 10, 64); return uint64(val) }())
+			}
+			if a.So(v.Float32Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Float32Ptr, s.ShouldEqual, func() float32 { val, _ := strconv.ParseFloat(m[Float32], 32); return float32(val) }())
+			}
+			if a.So(v.Float64Ptr, s.ShouldNotBeNil) {
+				a.So(*v.Float64Ptr, s.ShouldEqual, func() float64 { val, _ := strconv.ParseFloat(m[Float64], 64); return float64(val) }())
+			}
+			if a.So(v.BoolPtr, s.ShouldNotBeNil) {
+				a.So(*v.BoolPtr, s.ShouldEqual, func() bool { val, _ := strconv.ParseBool(m[Bool]); return bool(val) }())
+			}
+			if a.So(v.StringPtr, s.ShouldNotBeNil) {
+				a.So(*v.StringPtr, s.ShouldEqual, m[String])
+			}
 		})
 	}
 }
