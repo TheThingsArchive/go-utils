@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
-
-	"github.com/fatih/structs"
 )
 
 func decodeToType(typ reflect.Kind, value string) interface{} {
@@ -51,20 +49,14 @@ func decodeToType(typ reflect.Kind, value string) interface{} {
 func unmarshalToType(typ reflect.Type, value string) (val interface{}, err error) {
 	// If we get a pointer in, we'll return a pointer out
 	if typ.Kind() == reflect.Ptr {
-		val = reflect.New(typ.Elem()).Interface()
-	} else {
-		val = reflect.New(typ).Interface()
+		typ = typ.Elem()
 	}
+	val = reflect.New(typ).Interface()
 	defer func() {
 		if err == nil && typ.Kind() != reflect.Ptr {
 			val = reflect.Indirect(reflect.ValueOf(val)).Interface()
 		}
 	}()
-
-	// If we can just assign the value, return the value
-	if typ.AssignableTo(reflect.TypeOf(value)) {
-		return value, nil
-	}
 
 	// Try Unmarshalers
 	if um, ok := val.(encoding.TextUnmarshaler); ok {
@@ -76,11 +68,6 @@ func unmarshalToType(typ reflect.Type, value string) (val interface{}, err error
 		if err = um.UnmarshalJSON([]byte(value)); err == nil {
 			return val, nil
 		}
-	}
-
-	// Try conversion
-	if typ.ConvertibleTo(reflect.TypeOf(value)) {
-		return reflect.ValueOf(value).Convert(typ).Interface(), nil
 	}
 
 	// Try JSON
@@ -98,11 +85,16 @@ func unmarshalToType(typ reflect.Type, value string) (val interface{}, err error
 
 func Decode(tagName string, base interface{}, input map[string]string) (output interface{}, err error) {
 	baseType := reflect.TypeOf(base)
-	// If we get a pointer in, we'll return a pointer out
+
+	typ := baseType
 	if baseType.Kind() == reflect.Ptr {
-		baseType = baseType.Elem()
+		typ = typ.Elem()
 	}
-	output = reflect.New(baseType).Interface()
+
+	// If we get a pointer in, we'll return a pointer out
+	valPtr := reflect.New(typ)
+	val := valPtr.Elem()
+	output = valPtr.Interface()
 
 	defer func() {
 		if err == nil && baseType.Kind() != reflect.Ptr {
@@ -110,51 +102,54 @@ func Decode(tagName string, base interface{}, input map[string]string) (output i
 		}
 	}()
 
-	s := structs.New(output)
-	for _, field := range s.Fields() {
-		if !field.IsExported() {
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+
+		if field.Anonymous {
 			continue
 		}
 
-		tagName, _ := parseTag(field.Tag(tagName))
+		tagName, _ := parseTag(field.Tag.Get(tagName))
 		if tagName == "" || tagName == "-" {
 			continue
 		}
-		if str, ok := input[tagName]; ok {
-			baseField, _ := baseType.FieldByName(field.Name())
 
-			if str == "" {
+		str, ok := input[tagName]
+		if !ok || str == "" {
+			continue
+		}
+
+		fieldType := field.Type
+		fieldKind := field.Type.Kind()
+
+		isPointerField := fieldKind == reflect.Ptr
+
+		if isPointerField {
+			if str == "null" {
 				continue
 			}
+			fieldType = fieldType.Elem()
+			fieldKind = fieldType.Kind()
+		}
 
-			var val interface{}
-			switch field.Kind() {
-			case reflect.Ptr:
-				if str == "null" {
-					continue
-				}
-				fallthrough
-			case reflect.Struct, reflect.Array, reflect.Interface, reflect.Slice:
-				var err error
-				val, err = unmarshalToType(baseField.Type, str)
-				if err != nil {
-					return nil, err
-				}
-			default:
-				val = decodeToType(field.Kind(), str)
-			}
+		var fieldVal interface{}
 
-			if val == nil {
-				continue
-			}
-
-			if !baseField.Type.AssignableTo(reflect.TypeOf(val)) && baseField.Type.ConvertibleTo(reflect.TypeOf(val)) {
-				val = reflect.ValueOf(val).Convert(baseField.Type).Interface()
-			}
-
-			if err := field.Set(val); err != nil {
+		switch fieldKind {
+		case reflect.Struct, reflect.Array, reflect.Interface, reflect.Slice:
+			fieldVal, err = unmarshalToType(fieldType, str)
+			if err != nil {
 				return nil, err
 			}
+		default:
+			fieldVal = decodeToType(fieldKind, str)
+		}
+
+		if isPointerField {
+			fieldValPtr := reflect.New(fieldType)
+			fieldValPtr.Elem().Set(reflect.ValueOf(fieldVal))
+			val.Field(i).Set(fieldValPtr)
+		} else {
+			val.Field(i).Set(reflect.ValueOf(fieldVal))
 		}
 	}
 	return output, nil
