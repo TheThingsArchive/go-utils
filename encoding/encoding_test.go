@@ -9,7 +9,7 @@ import (
 	s "github.com/smartystreets/assertions"
 )
 
-func sliceToString(v interface{}) string {
+func marshalToString(v interface{}) string {
 	b, _ := json.Marshal(v)
 	return string(b)
 }
@@ -37,16 +37,20 @@ var (
 	intArrayVar    = [2]int{4, 2}
 	boolArrayVar   = [2]bool{true, false}
 	stringArrayVar = [2]string{"te", "st"}
+
+	stringStringMapVar = map[string]string{"te": "st"}
 )
 
 var (
-	intSliceVarString    = sliceToString(intSliceVar)
-	boolSliceVarString   = sliceToString(boolSliceVar)
-	stringSliceVarString = sliceToString(stringSliceVar)
+	intSliceVarString    = marshalToString(intSliceVar)
+	boolSliceVarString   = marshalToString(boolSliceVar)
+	stringSliceVarString = marshalToString(stringSliceVar)
 
-	intArrayVarString    = sliceToString(intArrayVar)
-	boolArrayVarString   = sliceToString(boolArrayVar)
-	stringArrayVarString = sliceToString(stringArrayVar)
+	intArrayVarString    = marshalToString(intArrayVar)
+	boolArrayVarString   = marshalToString(boolArrayVar)
+	stringArrayVarString = marshalToString(stringArrayVar)
+
+	stringStringMapVarString = marshalToString(stringStringMapVar)
 )
 
 const (
@@ -89,6 +93,8 @@ const (
 	IntArray    = "intArray"
 	BoolArray   = "boolArray"
 	StringArray = "stringArray"
+
+	StringStringMap = "stringStringMap"
 
 	Struct    = "struct"
 	Interface = "interface"
@@ -140,6 +146,8 @@ type testStruct struct {
 	IntArray    [2]int    `test:"intArray"`
 	BoolArray   [2]bool   `test:"boolArray"`
 	StringArray [2]string `test:"stringArray"`
+
+	StringStringMap map[string]string `test:"stringStringMap"`
 }
 
 func TestFromStringStringMap(t *testing.T) {
@@ -193,6 +201,8 @@ func TestFromStringStringMap(t *testing.T) {
 				IntArray:    intArrayVarString,
 				BoolArray:   boolArrayVarString,
 				StringArray: stringArrayVarString,
+
+				StringStringMap: stringStringMapVarString,
 			}
 
 			ret, err := FromStringStringMap(testTag, arg, m)
@@ -272,6 +282,8 @@ func TestFromStringStringMap(t *testing.T) {
 			a.So(v.IntArray, s.ShouldResemble, intArrayVar)
 			a.So(v.BoolArray, s.ShouldResemble, boolArrayVar)
 			a.So(v.StringArray, s.ShouldResemble, stringArrayVar)
+
+			a.So(v.StringStringMap, s.ShouldResemble, stringStringMapVar)
 		})
 	}
 }
@@ -314,6 +326,8 @@ var testStructVar = testStruct{
 	IntArray:    intArrayVar,
 	BoolArray:   boolArrayVar,
 	StringArray: stringArrayVar,
+
+	StringStringMap: stringStringMapVar,
 }
 
 func TestToStringStringMap(t *testing.T) {
@@ -364,13 +378,15 @@ func TestToStringStringMap(t *testing.T) {
 			a.So(enc[BoolPtr], s.ShouldEqual, strconv.FormatBool(v.Bool))
 			a.So(enc[StringPtr], s.ShouldEqual, v.String)
 
-			a.So(enc[IntSlice], s.ShouldEqual, sliceToString(v.IntSlice))
-			a.So(enc[BoolSlice], s.ShouldEqual, sliceToString(v.BoolSlice))
-			a.So(enc[StringSlice], s.ShouldEqual, sliceToString(v.StringSlice))
+			a.So(enc[IntSlice], s.ShouldEqual, marshalToString(v.IntSlice))
+			a.So(enc[BoolSlice], s.ShouldEqual, marshalToString(v.BoolSlice))
+			a.So(enc[StringSlice], s.ShouldEqual, marshalToString(v.StringSlice))
 
-			a.So(enc[IntArray], s.ShouldEqual, sliceToString(v.IntArray))
-			a.So(enc[BoolArray], s.ShouldEqual, sliceToString(v.BoolArray))
-			a.So(enc[StringArray], s.ShouldEqual, sliceToString(v.StringArray))
+			a.So(enc[IntArray], s.ShouldEqual, marshalToString(v.IntArray))
+			a.So(enc[BoolArray], s.ShouldEqual, marshalToString(v.BoolArray))
+			a.So(enc[StringArray], s.ShouldEqual, marshalToString(v.StringArray))
+
+			a.So(enc[StringStringMap], s.ShouldEqual, marshalToString(v.StringStringMap))
 		})
 	}
 }
@@ -430,6 +446,8 @@ func TestToStringInterfaceMap(t *testing.T) {
 			a.So(enc[IntArray], s.ShouldResemble, v.IntArray)
 			a.So(enc[BoolArray], s.ShouldResemble, v.BoolArray)
 			a.So(enc[StringArray], s.ShouldResemble, v.StringArray)
+
+			a.So(enc[StringStringMap], s.ShouldResemble, v.StringStringMap)
 		})
 	}
 }

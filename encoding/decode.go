@@ -136,7 +136,7 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 		var fieldVal interface{}
 
 		switch fieldKind {
-		case reflect.Struct, reflect.Array, reflect.Interface, reflect.Slice:
+		case reflect.Struct, reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
 			fieldVal, err = unmarshalToType(fieldType, str)
 			if err != nil {
 				return nil, err
