@@ -115,6 +115,9 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 
 		if txt, err := json.Marshal(val); err == nil {
 			vmap[tagName] = string(txt)
+			if vmap[tagName] == `""` || vmap[tagName] == "null" {
+				vmap[tagName] = ""
+			}
 			continue
 		}
 
