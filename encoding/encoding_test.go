@@ -39,6 +39,8 @@ var (
 	stringArrayVar = [2]string{"te", "st"}
 
 	stringStringMapVar = map[string]string{"te": "st"}
+
+	inclStructVar = inclStruct{Int: intVar, SubInclStruct: subInclStruct{Int: intVar}}
 )
 
 var (
@@ -96,9 +98,21 @@ const (
 
 	StringStringMap = "stringStringMap"
 
+	InclStruct    = "inclStruct"
+	SubInclStruct = "subInclStruct"
+
 	Struct    = "struct"
 	Interface = "interface"
 )
+
+type inclStruct struct {
+	Int           int           `test:"int"`
+	SubInclStruct subInclStruct `test:"subInclStruct,include"`
+}
+
+type subInclStruct struct {
+	Int int `test:"int"`
+}
 
 type embStruct struct{}
 type embInterface interface{}
@@ -148,6 +162,8 @@ type testStruct struct {
 	StringArray [2]string `test:"stringArray"`
 
 	StringStringMap map[string]string `test:"stringStringMap"`
+
+	InclStruct inclStruct `test:"inclStruct,include"`
 }
 
 func TestFromStringStringMap(t *testing.T) {
@@ -203,6 +219,10 @@ func TestFromStringStringMap(t *testing.T) {
 				StringArray: stringArrayVarString,
 
 				StringStringMap: stringStringMapVarString,
+
+				InclStruct + "." + Int: strconv.Itoa(intVar),
+
+				InclStruct + "." + SubInclStruct + "." + Int: strconv.Itoa(intVar),
 			}
 
 			ret, err := FromStringStringMap(testTag, arg, m)
@@ -284,6 +304,13 @@ func TestFromStringStringMap(t *testing.T) {
 			a.So(v.StringArray, s.ShouldResemble, stringArrayVar)
 
 			a.So(v.StringStringMap, s.ShouldResemble, stringStringMapVar)
+
+			a.So(v.InclStruct.Int, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[InclStruct+"."+Int], 10, 0); return int(val) }())
+
+			a.So(v.InclStruct.SubInclStruct.Int, s.ShouldEqual, func() int {
+				val, _ := strconv.ParseInt(m[InclStruct+"."+SubInclStruct+"."+Int], 10, 0)
+				return int(val)
+			}())
 		})
 	}
 }
@@ -328,6 +355,8 @@ var testStructVar = testStruct{
 	StringArray: stringArrayVar,
 
 	StringStringMap: stringStringMapVar,
+
+	InclStruct: inclStructVar,
 }
 
 func TestToStringStringMap(t *testing.T) {
@@ -387,6 +416,9 @@ func TestToStringStringMap(t *testing.T) {
 			a.So(enc[StringArray], s.ShouldEqual, marshalToString(v.StringArray))
 
 			a.So(enc[StringStringMap], s.ShouldEqual, marshalToString(v.StringStringMap))
+
+			a.So(enc[InclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStruct.Int), 10))
+			a.So(enc[InclStruct+"."+SubInclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStruct.SubInclStruct.Int), 10))
 		})
 	}
 }
@@ -448,6 +480,9 @@ func TestToStringInterfaceMap(t *testing.T) {
 			a.So(enc[StringArray], s.ShouldResemble, v.StringArray)
 
 			a.So(enc[StringStringMap], s.ShouldResemble, v.StringStringMap)
+
+			a.So(enc[InclStruct+".int"], s.ShouldEqual, v.InclStruct.Int)
+			a.So(enc[InclStruct+"."+SubInclStruct+".int"], s.ShouldEqual, v.InclStruct.SubInclStruct.Int)
 		})
 	}
 }

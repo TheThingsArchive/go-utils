@@ -62,8 +62,8 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			continue
 		}
 
-		tagName, opts := parseTag(field.Tag(tagName))
-		if tagName == "" || tagName == "-" {
+		fieldName, opts := parseTag(field.Tag(tagName))
+		if fieldName == "" || fieldName == "-" {
 			continue
 		}
 
@@ -81,11 +81,28 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			}
 		}
 
+		if opts.Has("include") && field.Kind() == reflect.Struct {
+			var newProperties []string
+			for _, prop := range properties {
+				if strings.HasPrefix(prop, fieldName+".") {
+					newProperties = append(newProperties, strings.TrimPrefix(prop, fieldName+"."))
+				}
+			}
+			m, err := ToStringStringMap(tagName, val, newProperties...)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range m {
+				vmap[fieldName+"."+k] = v
+			}
+			continue
+		}
+
 		if v, ok := val.(string); ok {
-			vmap[tagName] = v
+			vmap[fieldName] = v
 			continue
 		} else if v, ok := val.(*string); ok {
-			vmap[tagName] = *v
+			vmap[fieldName] = *v
 			continue
 		}
 
@@ -95,7 +112,7 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 				if err != nil {
 					return nil, err
 				}
-				vmap[tagName] = string(txt)
+				vmap[fieldName] = string(txt)
 				continue
 			}
 			if m, ok := val.(json.Marshaler); ok {
@@ -103,25 +120,25 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 				if err != nil {
 					return nil, err
 				}
-				vmap[tagName] = string(txt)
+				vmap[fieldName] = string(txt)
 				continue
 			}
 		}
 
 		if field.Kind() == reflect.String {
-			vmap[tagName] = fmt.Sprint(val)
+			vmap[fieldName] = fmt.Sprint(val)
 			continue
 		}
 
 		if txt, err := json.Marshal(val); err == nil {
-			vmap[tagName] = string(txt)
-			if vmap[tagName] == `""` || vmap[tagName] == "null" {
-				vmap[tagName] = ""
+			vmap[fieldName] = string(txt)
+			if vmap[fieldName] == `""` || vmap[fieldName] == "null" {
+				vmap[fieldName] = ""
 			}
 			continue
 		}
 
-		vmap[tagName] = fmt.Sprintf("%v", val)
+		vmap[fieldName] = fmt.Sprintf("%v", val)
 	}
 	return vmap, nil
 }
@@ -144,8 +161,8 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 			continue
 		}
 
-		tagName, opts := parseTag(field.Tag(tagName))
-		if tagName == "" || tagName == "-" {
+		fieldName, opts := parseTag(field.Tag(tagName))
+		if fieldName == "" || fieldName == "-" {
 			continue
 		}
 
@@ -163,7 +180,24 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 			}
 		}
 
-		vmap[tagName] = val
+		if opts.Has("include") && field.Kind() == reflect.Struct {
+			var newProperties []string
+			for _, prop := range properties {
+				if strings.HasPrefix(prop, fieldName+".") {
+					newProperties = append(newProperties, strings.TrimPrefix(prop, fieldName+"."))
+				}
+			}
+			m, err := ToStringInterfaceMap(tagName, val, newProperties...)
+			if err != nil {
+				return nil, err
+			}
+			for k, v := range m {
+				vmap[fieldName+"."+k] = v
+			}
+			continue
+		}
+
+		vmap[fieldName] = val
 	}
 	return vmap, nil
 }
