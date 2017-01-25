@@ -23,8 +23,8 @@ type tagOptions []string
 
 // Has returns true if opt is one of the options
 func (t tagOptions) Has(opt string) bool {
-	for _, opt := range t {
-		if opt == opt {
+	for _, hasOpt := range t {
+		if hasOpt == opt {
 			return true
 		}
 	}
