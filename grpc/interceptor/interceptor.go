@@ -33,9 +33,10 @@ func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, 
 		log = log.WithField("Code", code)
 
 		if grpcErr != nil {
-			log = log.WithError(err)
+			log.WithError(err).Debugf("%s failed", reqStr)
+		} else {
+			log.Debugf("%s completed", reqStr)
 		}
-		log.Debugf("%s completed", reqStr)
 
 		return resp, grpcErr
 	}
@@ -62,9 +63,10 @@ func Stream(fn func(srv interface{}, info *grpc.StreamServerInfo) (log.Interface
 		log = log.WithField("Code", code)
 
 		if grpcErr != nil && code != codes.Canceled {
-			log = log.WithError(err)
+			log.WithError(err).Debugf("%s errored", streamStr)
+		} else {
+			log.Debugf("%s closed", streamStr)
 		}
-		log.Debugf("%s closed", streamStr)
 
 		return grpcErr
 	}
