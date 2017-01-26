@@ -22,7 +22,7 @@ func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, 
 		fields["Method"] = info.FullMethod
 		log = log.WithFields(fields)
 
-		log.Debugf("Received %s", reqStr)
+		log.Debugf("%s started", reqStr)
 
 		start := time.Now()
 		resp, err = handler(ctx, req)
@@ -33,10 +33,10 @@ func Unary(fn func(req interface{}, info *grpc.UnaryServerInfo) (log.Interface, 
 		log = log.WithField("Code", code)
 
 		if grpcErr != nil {
-			log.WithError(err).Errorf("%s failed", reqStr)
-		} else {
-			log.Debugf("%s completed", reqStr)
+			log = log.WithError(err)
 		}
+		log.Debugf("%s completed", reqStr)
+
 		return resp, grpcErr
 	}
 }
@@ -51,7 +51,7 @@ func Stream(fn func(srv interface{}, info *grpc.StreamServerInfo) (log.Interface
 		fields["Method"] = info.FullMethod
 		log = log.WithFields(fields)
 
-		log.Debugf("Opening a new %s", streamStr)
+		log.Debugf("%s opened", streamStr)
 
 		start := time.Now()
 		err = handler(srv, ss)
@@ -62,10 +62,9 @@ func Stream(fn func(srv interface{}, info *grpc.StreamServerInfo) (log.Interface
 		log = log.WithField("Code", code)
 
 		if grpcErr != nil && code != codes.Canceled {
-			log.WithError(err).Errorf("%s failed", streamStr)
-		} else {
-			log.Debugf("%s closed", streamStr)
+			log = log.WithError(err)
 		}
+		log.Debugf("%s closed", streamStr)
 
 		return grpcErr
 	}
