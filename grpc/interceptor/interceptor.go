@@ -3,9 +3,9 @@ package interceptor
 import (
 	"time"
 
+	"github.com/TheThingsNetwork/go-utils/log"
 	"github.com/TheThingsNetwork/ttn/api"
 	"github.com/TheThingsNetwork/ttn/utils/errors"
-	"github.com/apex/log"
 	context "golang.org/x/net/context" //TODO change to "context", when protoc supports it
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
