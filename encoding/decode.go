@@ -116,42 +116,42 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 			continue
 		}
 
-		if opts.Has("include") && field.Type.Kind() == reflect.Struct {
-			subInput := make(map[string]string)
-			for k, v := range input {
-				if strings.HasPrefix(k, fieldName+".") {
-					subInput[strings.TrimPrefix(k, fieldName+".")] = v
-				}
-			}
-			subOutput, err := FromStringStringMap(tagName, val.Field(i).Interface(), subInput)
-			if err != nil {
-				return nil, err
-			}
-			val.Field(i).Set(reflect.ValueOf(subOutput))
-		}
-
-		str, ok := input[fieldName]
-		if !ok || str == "" {
-			continue
-		}
-
 		fieldType := field.Type
 		fieldKind := field.Type.Kind()
 
 		isPointerField := fieldKind == reflect.Ptr
-
 		if isPointerField {
-			if str == "null" {
-				continue
-			}
 			fieldType = fieldType.Elem()
 			fieldKind = fieldType.Kind()
 		}
 
 		var fieldVal interface{}
 
+		if fieldKind == reflect.Struct {
+			if opts.Has("include") {
+				subInput := make(map[string]string)
+				for k, v := range input {
+					if strings.HasPrefix(k, fieldName+".") {
+						subInput[strings.TrimPrefix(k, fieldName+".")] = v
+					}
+				}
+
+				subOutput, err := FromStringStringMap(tagName, val.Field(i).Interface(), subInput)
+				if err != nil {
+					return nil, err
+				}
+				val.Field(i).Set(reflect.ValueOf(subOutput))
+				continue
+			}
+		}
+
+		str, ok := input[fieldName]
+		if !ok || str == "" || isPointerField && str == "null" {
+			continue
+		}
+
 		switch fieldKind {
-		case reflect.Struct, reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
+		case reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
 			fieldVal, err = unmarshalToType(fieldType, str)
 			if err != nil {
 				return nil, err
@@ -168,5 +168,6 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 			val.Field(i).Set(reflect.ValueOf(fieldVal))
 		}
 	}
+
 	return output, nil
 }

@@ -100,6 +100,7 @@ const (
 
 	InclStruct    = "inclStruct"
 	SubInclStruct = "subInclStruct"
+	InclStructPtr = "inclStructPtr"
 
 	Struct    = "struct"
 	Interface = "interface"
@@ -163,7 +164,8 @@ type testStruct struct {
 
 	StringStringMap map[string]string `test:"stringStringMap"`
 
-	InclStruct inclStruct `test:"inclStruct,include"`
+	InclStruct    inclStruct  `test:"inclStruct,include"`
+	InclStructPtr *inclStruct `test:"inclStructPtr,include"`
 }
 
 func TestFromStringStringMap(t *testing.T) {
@@ -220,9 +222,11 @@ func TestFromStringStringMap(t *testing.T) {
 
 				StringStringMap: stringStringMapVarString,
 
-				InclStruct + "." + Int: strconv.Itoa(intVar),
-
+				InclStruct + "." + Int:                       strconv.Itoa(intVar),
 				InclStruct + "." + SubInclStruct + "." + Int: strconv.Itoa(intVar),
+
+				InclStructPtr + "." + Int:                       strconv.Itoa(intVar),
+				InclStructPtr + "." + SubInclStruct + "." + Int: strconv.Itoa(intVar),
 			}
 
 			ret, err := FromStringStringMap(testTag, arg, m)
@@ -306,11 +310,18 @@ func TestFromStringStringMap(t *testing.T) {
 			a.So(v.StringStringMap, s.ShouldResemble, stringStringMapVar)
 
 			a.So(v.InclStruct.Int, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[InclStruct+"."+Int], 10, 0); return int(val) }())
-
 			a.So(v.InclStruct.SubInclStruct.Int, s.ShouldEqual, func() int {
 				val, _ := strconv.ParseInt(m[InclStruct+"."+SubInclStruct+"."+Int], 10, 0)
 				return int(val)
 			}())
+
+			if a.So(v.InclStructPtr, s.ShouldNotBeNil) {
+				a.So(v.InclStructPtr.Int, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[InclStructPtr+"."+Int], 10, 0); return int(val) }())
+				a.So(v.InclStructPtr.SubInclStruct.Int, s.ShouldEqual, func() int {
+					val, _ := strconv.ParseInt(m[InclStructPtr+"."+SubInclStruct+"."+Int], 10, 0)
+					return int(val)
+				}())
+			}
 		})
 	}
 }
@@ -356,7 +367,8 @@ var testStructVar = testStruct{
 
 	StringStringMap: stringStringMapVar,
 
-	InclStruct: inclStructVar,
+	InclStruct:    inclStructVar,
+	InclStructPtr: &inclStructVar,
 }
 
 func TestToStringStringMap(t *testing.T) {
@@ -419,6 +431,9 @@ func TestToStringStringMap(t *testing.T) {
 
 			a.So(enc[InclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStruct.Int), 10))
 			a.So(enc[InclStruct+"."+SubInclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStruct.SubInclStruct.Int), 10))
+
+			a.So(enc[InclStructPtr+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStructPtr.Int), 10))
+			a.So(enc[InclStructPtr+"."+SubInclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStructPtr.SubInclStruct.Int), 10))
 		})
 	}
 }
@@ -456,20 +471,20 @@ func TestToStringInterfaceMap(t *testing.T) {
 			a.So(enc[Bool], s.ShouldEqual, v.Bool)
 			a.So(enc[String], s.ShouldEqual, v.String)
 
-			a.So(enc[IntPtr], s.ShouldEqual, v.IntPtr)
-			a.So(enc[Int8Ptr], s.ShouldEqual, v.Int8Ptr)
-			a.So(enc[Int16Ptr], s.ShouldEqual, v.Int16Ptr)
-			a.So(enc[Int32Ptr], s.ShouldEqual, v.Int32Ptr)
-			a.So(enc[Int64Ptr], s.ShouldEqual, v.Int64Ptr)
-			a.So(enc[UintPtr], s.ShouldEqual, v.UintPtr)
-			a.So(enc[Uint8Ptr], s.ShouldEqual, v.Uint8Ptr)
-			a.So(enc[Uint16Ptr], s.ShouldEqual, v.Uint16Ptr)
-			a.So(enc[Uint32Ptr], s.ShouldEqual, v.Uint32Ptr)
-			a.So(enc[Uint64Ptr], s.ShouldEqual, v.Uint64Ptr)
-			a.So(enc[Float32Ptr], s.ShouldEqual, v.Float32Ptr)
-			a.So(enc[Float64Ptr], s.ShouldEqual, v.Float64Ptr)
-			a.So(enc[BoolPtr], s.ShouldEqual, v.BoolPtr)
-			a.So(enc[StringPtr], s.ShouldEqual, v.StringPtr)
+			a.So(enc[IntPtr], s.ShouldEqual, *v.IntPtr)
+			a.So(enc[Int8Ptr], s.ShouldEqual, *v.Int8Ptr)
+			a.So(enc[Int16Ptr], s.ShouldEqual, *v.Int16Ptr)
+			a.So(enc[Int32Ptr], s.ShouldEqual, *v.Int32Ptr)
+			a.So(enc[Int64Ptr], s.ShouldEqual, *v.Int64Ptr)
+			a.So(enc[UintPtr], s.ShouldEqual, *v.UintPtr)
+			a.So(enc[Uint8Ptr], s.ShouldEqual, *v.Uint8Ptr)
+			a.So(enc[Uint16Ptr], s.ShouldEqual, *v.Uint16Ptr)
+			a.So(enc[Uint32Ptr], s.ShouldEqual, *v.Uint32Ptr)
+			a.So(enc[Uint64Ptr], s.ShouldEqual, *v.Uint64Ptr)
+			a.So(enc[Float32Ptr], s.ShouldEqual, *v.Float32Ptr)
+			a.So(enc[Float64Ptr], s.ShouldEqual, *v.Float64Ptr)
+			a.So(enc[BoolPtr], s.ShouldEqual, *v.BoolPtr)
+			a.So(enc[StringPtr], s.ShouldEqual, *v.StringPtr)
 
 			a.So(enc[IntSlice], s.ShouldResemble, v.IntSlice)
 			a.So(enc[BoolSlice], s.ShouldResemble, v.BoolSlice)
@@ -483,6 +498,9 @@ func TestToStringInterfaceMap(t *testing.T) {
 
 			a.So(enc[InclStruct+".int"], s.ShouldEqual, v.InclStruct.Int)
 			a.So(enc[InclStruct+"."+SubInclStruct+".int"], s.ShouldEqual, v.InclStruct.SubInclStruct.Int)
+
+			a.So(enc[InclStructPtr+".int"], s.ShouldEqual, v.InclStructPtr.Int)
+			a.So(enc[InclStructPtr+"."+SubInclStruct+".int"], s.ShouldEqual, v.InclStructPtr.SubInclStruct.Int)
 		})
 	}
 }

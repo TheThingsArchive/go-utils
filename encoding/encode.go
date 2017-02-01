@@ -81,7 +81,14 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			}
 		}
 
-		if opts.Has("include") && field.Kind() == reflect.Struct {
+		kind := field.Kind()
+		if kind == reflect.Ptr {
+			elem := reflect.ValueOf(val).Elem()
+			kind = elem.Kind()
+			val = elem.Interface()
+		}
+
+		if opts.Has("include") && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
 				if strings.HasPrefix(prop, fieldName+".") {
@@ -125,7 +132,7 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			}
 		}
 
-		if field.Kind() == reflect.String {
+		if kind == reflect.String {
 			vmap[fieldName] = fmt.Sprint(val)
 			continue
 		}
@@ -180,7 +187,15 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 			}
 		}
 
-		if opts.Has("include") && field.Kind() == reflect.Struct {
+		kind := field.Kind()
+
+		if field.Kind() == reflect.Ptr {
+			elem := reflect.ValueOf(val).Elem()
+			kind = elem.Kind()
+			val = elem.Interface()
+		}
+
+		if opts.Has("include") && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
 				if strings.HasPrefix(prop, fieldName+".") {
