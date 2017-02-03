@@ -75,11 +75,12 @@ func Stream(fn func(srv interface{}, info *grpc.StreamServerInfo) (log.Interface
 func fieldsFromContext(ctx context.Context) log.Fields {
 	fields := log.Fields{}
 
+	var authType string
 	if peer, ok := peer.FromContext(ctx); ok {
 		fields["CallerIP"] = peer.Addr.String()
 
 		if peer.AuthInfo != nil {
-			fields["Auth-Type"] = peer.AuthInfo.AuthType()
+			authType = peer.AuthInfo.AuthType()
 		}
 	}
 
@@ -89,7 +90,21 @@ func fieldsFromContext(ctx context.Context) log.Fields {
 	}
 
 	if id, err := api.IDFromMetadata(md); err == nil {
-		fields["ID"] = id
+		fields["CallerID"] = id
+	}
+
+	if _, err := api.KeyFromMetadata(md); err == nil {
+		if authType != "" {
+			authType += "+"
+		}
+		authType += "key"
+	}
+
+	if _, err := api.TokenFromMetadata(md); err == nil {
+		if authType != "" {
+			authType += "+"
+		}
+		authType += "token"
 	}
 
 	if offset, err := api.OffsetFromMetadata(md); err == nil && offset != 0 {
@@ -99,6 +114,8 @@ func fieldsFromContext(ctx context.Context) log.Fields {
 	if limit, err := api.LimitFromMetadata(md); err == nil && limit != 0 {
 		fields["Limit"] = limit
 	}
+
+	fields["Auth-Type"] = authType
 
 	return fields
 }
