@@ -136,6 +136,10 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 					}
 				}
 
+				if len(subInput) == 0 {
+					continue
+				}
+
 				subOutput, err := FromStringStringMap(tagName, val.Field(i).Interface(), subInput)
 				if err != nil {
 					return nil, err
