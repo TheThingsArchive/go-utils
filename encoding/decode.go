@@ -116,11 +116,16 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 			continue
 		}
 
+		inputStr, fieldInInput := input[fieldName]
+
 		fieldType := field.Type
 		fieldKind := field.Type.Kind()
 
 		isPointerField := fieldKind == reflect.Ptr
 		if isPointerField {
+			if inputStr == "null" {
+				continue
+			}
 			fieldType = fieldType.Elem()
 			fieldKind = fieldType.Kind()
 		}
@@ -149,19 +154,18 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 			continue
 		}
 
-		str, ok := input[fieldName]
-		if !ok || str == "" || isPointerField && str == "null" {
+		if !fieldInInput || inputStr == "" {
 			continue
 		}
 
 		switch fieldKind {
 		case reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
-			fieldVal, err = unmarshalToType(fieldType, str)
+			fieldVal, err = unmarshalToType(fieldType, inputStr)
 			if err != nil {
 				return nil, err
 			}
 		default:
-			fieldVal = decodeToType(fieldKind, str)
+			fieldVal = decodeToType(fieldKind, inputStr)
 		}
 
 		if isPointerField {
