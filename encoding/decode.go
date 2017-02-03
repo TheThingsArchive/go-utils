@@ -107,7 +107,7 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 	for i := 0; i < valType.NumField(); i++ {
 		field := valType.Field(i)
 
-		if field.Anonymous {
+		if field.PkgPath != "" {
 			continue
 		}
 
@@ -141,8 +141,8 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 					return nil, err
 				}
 				val.Field(i).Set(reflect.ValueOf(subOutput))
-				continue
 			}
+			continue
 		}
 
 		str, ok := input[fieldName]
