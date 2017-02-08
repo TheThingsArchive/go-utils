@@ -130,7 +130,7 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 			fieldKind = fieldType.Kind()
 		}
 
-		var fieldVal interface{}
+		var iface interface{}
 
 		if fieldKind == reflect.Struct {
 			if opts.Has("include") {
@@ -160,20 +160,22 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 
 		switch fieldKind {
 		case reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
-			fieldVal, err = unmarshalToType(fieldType, inputStr)
+			iface, err = unmarshalToType(fieldType, inputStr)
 			if err != nil {
 				return nil, err
 			}
 		default:
-			fieldVal = decodeToType(fieldKind, inputStr)
+			iface = decodeToType(fieldKind, inputStr)
 		}
+
+		fieldVal := reflect.ValueOf(iface).Convert(fieldType)
 
 		if isPointerField {
 			fieldValPtr := reflect.New(fieldType)
-			fieldValPtr.Elem().Set(reflect.ValueOf(fieldVal))
+			fieldValPtr.Elem().Set(fieldVal)
 			val.Field(i).Set(fieldValPtr)
 		} else {
-			val.Field(i).Set(reflect.ValueOf(fieldVal))
+			val.Field(i).Set(fieldVal)
 		}
 	}
 
