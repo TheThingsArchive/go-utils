@@ -107,7 +107,7 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 	for i := 0; i < valType.NumField(); i++ {
 		field := valType.Field(i)
 
-		if field.Anonymous {
+		if field.PkgPath != "" {
 			continue
 		}
 
@@ -116,57 +116,68 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 			continue
 		}
 
-		if opts.Has("include") && field.Type.Kind() == reflect.Struct {
-			subInput := make(map[string]string)
-			for k, v := range input {
-				if strings.HasPrefix(k, fieldName+".") {
-					subInput[strings.TrimPrefix(k, fieldName+".")] = v
-				}
-			}
-			subOutput, err := FromStringStringMap(tagName, val.Field(i).Interface(), subInput)
-			if err != nil {
-				return nil, err
-			}
-			val.Field(i).Set(reflect.ValueOf(subOutput))
-		}
-
-		str, ok := input[fieldName]
-		if !ok || str == "" {
-			continue
-		}
+		inputStr, fieldInInput := input[fieldName]
 
 		fieldType := field.Type
 		fieldKind := field.Type.Kind()
 
 		isPointerField := fieldKind == reflect.Ptr
-
 		if isPointerField {
-			if str == "null" {
+			if inputStr == "null" {
 				continue
 			}
 			fieldType = fieldType.Elem()
 			fieldKind = fieldType.Kind()
 		}
 
-		var fieldVal interface{}
+		var iface interface{}
+
+		if fieldKind == reflect.Struct {
+			if opts.Has("include") {
+				subInput := make(map[string]string)
+				for k, v := range input {
+					if strings.HasPrefix(k, fieldName+".") {
+						subInput[strings.TrimPrefix(k, fieldName+".")] = v
+					}
+				}
+
+				if len(subInput) == 0 {
+					continue
+				}
+
+				subOutput, err := FromStringStringMap(tagName, val.Field(i).Interface(), subInput)
+				if err != nil {
+					return nil, err
+				}
+				val.Field(i).Set(reflect.ValueOf(subOutput))
+			}
+			continue
+		}
+
+		if !fieldInInput || inputStr == "" {
+			continue
+		}
 
 		switch fieldKind {
-		case reflect.Struct, reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
-			fieldVal, err = unmarshalToType(fieldType, str)
+		case reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
+			iface, err = unmarshalToType(fieldType, inputStr)
 			if err != nil {
 				return nil, err
 			}
 		default:
-			fieldVal = decodeToType(fieldKind, str)
+			iface = decodeToType(fieldKind, inputStr)
 		}
+
+		fieldVal := reflect.ValueOf(iface).Convert(fieldType)
 
 		if isPointerField {
 			fieldValPtr := reflect.New(fieldType)
-			fieldValPtr.Elem().Set(reflect.ValueOf(fieldVal))
+			fieldValPtr.Elem().Set(fieldVal)
 			val.Field(i).Set(fieldValPtr)
 		} else {
-			val.Field(i).Set(reflect.ValueOf(fieldVal))
+			val.Field(i).Set(fieldVal)
 		}
 	}
+
 	return output, nil
 }
