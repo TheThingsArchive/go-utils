@@ -107,8 +107,8 @@ const (
 
 	SubInclStruct = "subInclStruct"
 
-	Struct    = "struct"
-	Interface = "interface"
+	EmbStructTag    = "embStruct"
+	EmbInterfaceTag = "embInterface"
 )
 
 type inclStruct struct {
@@ -167,8 +167,8 @@ type testStruct struct {
 
 	StringStringMap map[string]string `test:"stringStringMap"`
 
-	EmbStruct    `test:"struct,include"`
-	EmbInterface `test:"interface,include"`
+	EmbStruct    `test:"embStruct,include"`
+	EmbInterface `test:"embInterface,include"`
 
 	InclStruct         inclStruct  `test:"inclStruct,include"`
 	InclStructEmpty    inclStruct  `test:"inclStructEmpty,include,omitempty"`
@@ -232,7 +232,7 @@ func TestFromStringStringMap(t *testing.T) {
 
 				StringStringMap: stringStringMapVarString,
 
-				Struct + "." + Int: strconv.Itoa(intVar),
+				EmbStructTag + "." + Int: strconv.Itoa(intVar),
 
 				InclStruct + "." + Int:                       strconv.Itoa(intVar),
 				InclStruct + "." + SubInclStruct + "." + Int: strconv.Itoa(intVar),
@@ -324,7 +324,7 @@ func TestFromStringStringMap(t *testing.T) {
 
 			a.So(v.StringStringMap, s.ShouldResemble, stringStringMapVar)
 
-			a.So(v.EmbStruct.Int, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[Struct+"."+Int], 10, 0); return int(val) }())
+			a.So(v.EmbStruct.Int, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[EmbStructTag+"."+Int], 10, 0); return int(val) }())
 
 			a.So(v.InclStruct.Int, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[InclStruct+"."+Int], 10, 0); return int(val) }())
 			a.So(v.InclStruct.SubInclStruct.Int, s.ShouldEqual, func() int {
@@ -452,7 +452,7 @@ func TestToStringStringMap(t *testing.T) {
 
 			a.So(enc[StringStringMap], s.ShouldEqual, marshalToString(v.StringStringMap))
 
-			a.So(enc[Struct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.EmbStruct.Int), 10))
+			a.So(enc[EmbStructTag+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.EmbStruct.Int), 10))
 
 			a.So(enc[InclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStruct.Int), 10))
 			a.So(enc[InclStruct+"."+SubInclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStruct.SubInclStruct.Int), 10))
@@ -528,7 +528,7 @@ func TestToStringInterfaceMap(t *testing.T) {
 
 			a.So(enc[StringStringMap], s.ShouldResemble, v.StringStringMap)
 
-			a.So(enc[Struct+".int"], s.ShouldEqual, v.EmbStruct.Int)
+			a.So(enc[EmbStructTag+".int"], s.ShouldEqual, v.EmbStruct.Int)
 
 			a.So(enc[InclStruct+".int"], s.ShouldEqual, v.InclStruct.Int)
 			a.So(enc[InclStruct+"."+SubInclStruct+".int"], s.ShouldEqual, v.InclStruct.SubInclStruct.Int)
