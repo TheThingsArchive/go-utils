@@ -99,7 +99,7 @@ const (
 	StringStringMap = "stringStringMap"
 
 	InclStruct         = "inclStruct"
-	InclStructEmpty    = "inclStructPtrEmpty"
+	InclStructEmpty    = "inclStructEmpty"
 	InclStructPtr      = "inclStructPtr"
 	InclStructPtrEmpty = "inclStructPtrEmpty"
 
