@@ -8,12 +8,14 @@ import (
 	brocaar "github.com/brocaar/lorawan"
 )
 
+// Seed is a wrapper around rand.Seed
 func Seed(seed int64) {
 	rand.Seed(seed)
 }
 
 const idChars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
+// ID returns randomly generated ID
 func ID(n ...int) string {
 	var nVal int
 	if len(n) > 0 {

@@ -171,7 +171,7 @@ func LorawanTxConfiguration(modulation ...lorawan.Modulation) *lorawan.TxConfigu
 	return conf
 }
 
-// LorawanGatewayUplink returns ly generated lorawan uplink message(join request, confirmed or unconfirmed uplink)
+// LorawanGatewayUplink returns randomly generated lorawan uplink message(join request, confirmed or unconfirmed uplink)
 func LorawanGatewayUplink(modulation ...lorawan.Modulation) *router.UplinkMessage {
 	switch rand.Intn(3) {
 	case 0:
@@ -183,7 +183,7 @@ func LorawanGatewayUplink(modulation ...lorawan.Modulation) *router.UplinkMessag
 	}
 }
 
-// LorawanJoinRequest returns ly generated lorawan join request
+// LorawanJoinRequest returns randomly generated lorawan join request
 func LorawanJoinRequest(modulation ...lorawan.Modulation) *router.UplinkMessage {
 	return &router.UplinkMessage{
 		GatewayMetadata:  GatewayRxMetadata(),
@@ -192,7 +192,7 @@ func LorawanJoinRequest(modulation ...lorawan.Modulation) *router.UplinkMessage 
 	}
 }
 
-// LorawanConfirmedUplink returns ly generated confirmed lorawan uplink message
+// LorawanConfirmedUplink returns randomly generated confirmed lorawan uplink message
 func LorawanConfirmedUplink(modulation ...lorawan.Modulation) *router.UplinkMessage {
 	return &router.UplinkMessage{
 		GatewayMetadata:  GatewayRxMetadata(),
@@ -201,7 +201,7 @@ func LorawanConfirmedUplink(modulation ...lorawan.Modulation) *router.UplinkMess
 	}
 }
 
-// LorawanUnconfirmedUplink returns ly generated unconfirmed lorawan uplink message
+// LorawanUnconfirmedUplink returns randomly generated unconfirmed lorawan uplink message
 func LorawanUnconfirmedUplink(modulation ...lorawan.Modulation) *router.UplinkMessage {
 	return &router.UplinkMessage{
 		GatewayMetadata:  GatewayRxMetadata(),
@@ -210,7 +210,7 @@ func LorawanUnconfirmedUplink(modulation ...lorawan.Modulation) *router.UplinkMe
 	}
 }
 
-// LorawanGatewayDownlink returns ly generated lorawan downlink message(join request, confirmed or unconfirmed downlink)
+// LorawanGatewayDownlink returns randomly generated lorawan downlink message(join request, confirmed or unconfirmed downlink)
 func LorawanGatewayDownlink(modulation ...lorawan.Modulation) *router.DownlinkMessage {
 	switch rand.Intn(3) {
 	case 0:
@@ -222,7 +222,7 @@ func LorawanGatewayDownlink(modulation ...lorawan.Modulation) *router.DownlinkMe
 	}
 }
 
-// LorawanJoinAccept returns ly generated lorawan join request
+// LorawanJoinAccept returns randomly generated lorawan join request
 func LorawanJoinAccept(modulation ...lorawan.Modulation) *router.DownlinkMessage {
 	return &router.DownlinkMessage{
 		GatewayConfiguration:  GatewayTxConfiguration(),
@@ -231,7 +231,7 @@ func LorawanJoinAccept(modulation ...lorawan.Modulation) *router.DownlinkMessage
 	}
 }
 
-// LorawanConfirmedDownlink returns ly generated confirmed lorawan downlink message
+// LorawanConfirmedDownlink returns randomly generated confirmed lorawan downlink message
 func LorawanConfirmedDownlink(modulation ...lorawan.Modulation) *router.DownlinkMessage {
 	return &router.DownlinkMessage{
 		GatewayConfiguration:  GatewayTxConfiguration(),
@@ -240,7 +240,7 @@ func LorawanConfirmedDownlink(modulation ...lorawan.Modulation) *router.Downlink
 	}
 }
 
-// LorawanUnconfirmedDownlink returns ly generated unconfirmed lorawan downlink message
+// LorawanUnconfirmedDownlink returns randomly generated unconfirmed lorawan downlink message
 func LorawanUnconfirmedDownlink(modulation ...lorawan.Modulation) *router.DownlinkMessage {
 	return &router.DownlinkMessage{
 		GatewayConfiguration:  GatewayTxConfiguration(),

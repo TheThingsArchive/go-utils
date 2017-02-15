@@ -16,6 +16,7 @@ func Location() (gps *gateway.GPSMetadata) {
 	}
 }
 
+// Location returns randomly generated gateway rx metadata
 func GatewayRxMetadata() *gateway.RxMetadata {
 	return &gateway.RxMetadata{
 		GatewayId:      ID(),
@@ -31,6 +32,7 @@ func GatewayRxMetadata() *gateway.RxMetadata {
 	}
 }
 
+// Location returns randomly generated gateway tx configuration
 func GatewayTxConfiguration() *gateway.TxConfiguration {
 	return &gateway.TxConfiguration{
 		Timestamp:             rand.Uint32(),
