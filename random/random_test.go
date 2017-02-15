@@ -12,8 +12,6 @@ type PayloadUnmarshaller interface {
 	UnmarshalPayload() error
 }
 
-type Validator api.Validator
-
 func TestRandomizers(t *testing.T) {
 	for name, msg := range map[string]interface{}{
 		"Location": Location(),
@@ -59,7 +57,7 @@ func TestRandomizers(t *testing.T) {
 		"GatewayDownlink()":         GatewayDownlink(),
 	} {
 		t.Run(name, func(t *testing.T) {
-			if v, ok := msg.(Validator); ok {
+			if v, ok := msg.(api.Validator); ok {
 				t.Run("Validate", func(t *testing.T) {
 					a := s.New(t)
 					a.So(v.Validate(), s.ShouldBeNil)
