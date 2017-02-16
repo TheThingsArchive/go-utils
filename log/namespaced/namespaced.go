@@ -17,8 +17,8 @@ type Namespaced struct {
 	namespace  string
 }
 
-// Namespace adds a namespace to the logger
-func Namespace(ctx log.Interface, namespace string) log.Interface {
+// WithNamespace adds a namespace to the logging context
+func WithNamespace(namespace string, ctx log.Interface) log.Interface {
 	return ctx.WithField(NamespaceKey, namespace)
 }
 

@@ -35,14 +35,14 @@ func TestNamespaced(t *testing.T) {
 
 	// correctly namespaced loggers should log
 	{
-		foo := Namespace(ctx, "foo")
+		foo := WithNamespace("foo", ctx)
 		foo.Info("message 3")
 		a.So(len(handler.Entries), ShouldEqual, 3)
 	}
 
 	// incorrectly namespaced loggers should not log
 	{
-		bar := Namespace(ctx, "bar")
+		bar := WithNamespace("bar", ctx)
 		bar.Info("message 4 (bar) should be ignored")
 		a.So(len(handler.Entries), ShouldEqual, 3)
 
