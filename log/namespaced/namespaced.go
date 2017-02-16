@@ -23,7 +23,7 @@ func WithNamespace(namespace string, ctx log.Interface) log.Interface {
 }
 
 // Wrap wraps the logger in a Namespaced logger and enables the specified
-// namespaces
+// namespaces. See SetNamespaces for information on how to set the namspaces
 func Wrap(ctx log.Interface, namespaces ...string) *Namespaced {
 	return &Namespaced{
 		Interface: ctx,
@@ -34,6 +34,16 @@ func Wrap(ctx log.Interface, namespaces ...string) *Namespaced {
 }
 
 // SetNamespaces replaces the set of enabled namespaces
+// The namespaces follow this format:
+// "*"   enables all namespaces
+// "a"   enables namespace a
+// "-a"  disables namespace a (even if "a" or "*" is set)
+// For example:
+//  - SetNamespaces("*", "-foo") enables every namespace but foo
+//  - SetNamespaces("foo") enables only foo
+//  - SetNamespaces() disables all namespaced entries
+//
+// Note that entries without a namespace will always be logged.
 func (n *Namespaced) SetNamespaces(namespaces ...string) {
 	n.namespaces.Set(namespaces)
 }
