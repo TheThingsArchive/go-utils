@@ -7,7 +7,7 @@ import (
 	"runtime"
 	"time"
 
-	"github.com/apex/log"
+	"github.com/TheThingsNetwork/go-utils/log"
 )
 
 var megaByte = float64(1024 * 1024)
