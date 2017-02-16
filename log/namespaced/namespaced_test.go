@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/TheThingsNetwork/go-utils/handlers/entries"
-	apx "github.com/TheThingsNetwork/go-utils/log/apex"
+	apex_wrapper "github.com/TheThingsNetwork/go-utils/log/apex"
 	apex "github.com/apex/log"
 	. "github.com/smartystreets/assertions"
 )
@@ -14,7 +14,7 @@ func TestNamespaced(t *testing.T) {
 
 	handler := entries.New()
 
-	ctx := Wrap(apx.Wrap(&apex.Logger{
+	ctx := Wrap(apex_wrapper.Wrap(&apex.Logger{
 		Level:   apex.DebugLevel,
 		Handler: handler,
 	}))
