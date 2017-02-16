@@ -84,7 +84,7 @@ func (n *Namespaced) WithError(err error) log.Interface {
 	}
 }
 
-// isEnabdled returns wether or not this Namespaced logger should,
+// isEnabdled returns wether or not this Namespaced logger should log,
 // based on the enabled namespaces and the namespace
 func (n *Namespaced) isEnabled() bool {
 	return n.namespaces.IsEnabled(n.namespace)
