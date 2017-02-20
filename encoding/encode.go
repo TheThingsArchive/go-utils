@@ -83,7 +83,12 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 
 		kind := field.Kind()
 		if kind == reflect.Ptr {
-			elem := reflect.ValueOf(val).Elem()
+			v := reflect.ValueOf(val)
+			if v.IsNil() {
+				vmap[fieldName] = ""
+				continue
+			}
+			elem := v.Elem()
 			kind = elem.Kind()
 			val = elem.Interface()
 		}
@@ -188,9 +193,13 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 		}
 
 		kind := field.Kind()
-
-		if field.Kind() == reflect.Ptr {
-			elem := reflect.ValueOf(val).Elem()
+		if kind == reflect.Ptr {
+			v := reflect.ValueOf(val)
+			if v.IsNil() {
+				vmap[fieldName] = nil
+				continue
+			}
+			elem := v.Elem()
 			kind = elem.Kind()
 			val = elem.Interface()
 		}

@@ -466,6 +466,42 @@ func TestToStringStringMap(t *testing.T) {
 			a.So(enc, s.ShouldNotContainKey, InclStructEmpty+"."+SubInclStruct+".int")
 			a.So(enc, s.ShouldNotContainKey, InclStructPtrEmpty+".int")
 			a.So(enc, s.ShouldNotContainKey, InclStructPtrEmpty+"."+SubInclStruct+".int")
+
+			if arg, ok := arg.(testStruct); ok {
+				arg.IntPtr = nil
+				arg.Int8Ptr = nil
+				arg.Int16Ptr = nil
+				arg.Int32Ptr = nil
+				arg.Int64Ptr = nil
+				arg.UintPtr = nil
+				arg.Uint8Ptr = nil
+				arg.Uint16Ptr = nil
+				arg.Uint32Ptr = nil
+				arg.Uint64Ptr = nil
+				arg.Float32Ptr = nil
+				arg.Float64Ptr = nil
+				arg.BoolPtr = nil
+				arg.StringPtr = nil
+
+				enc, err := ToStringStringMap(testTag, arg)
+				a.So(err, s.ShouldBeNil)
+
+				a.So(enc[IntPtr], s.ShouldEqual, "")
+				a.So(enc[Int8Ptr], s.ShouldEqual, "")
+				a.So(enc[Int16Ptr], s.ShouldEqual, "")
+				a.So(enc[Int32Ptr], s.ShouldEqual, "")
+				a.So(enc[Int64Ptr], s.ShouldEqual, "")
+				a.So(enc[UintPtr], s.ShouldEqual, "")
+				a.So(enc[Uint8Ptr], s.ShouldEqual, "")
+				a.So(enc[Uint16Ptr], s.ShouldEqual, "")
+				a.So(enc[Uint32Ptr], s.ShouldEqual, "")
+				a.So(enc[Uint64Ptr], s.ShouldEqual, "")
+				a.So(enc[Float32Ptr], s.ShouldEqual, "")
+				a.So(enc[Float64Ptr], s.ShouldEqual, "")
+				a.So(enc[BoolPtr], s.ShouldEqual, "")
+				a.So(enc[StringPtr], s.ShouldEqual, "")
+			}
+
 		})
 	}
 }
@@ -542,6 +578,42 @@ func TestToStringInterfaceMap(t *testing.T) {
 			a.So(enc, s.ShouldNotContainKey, InclStructEmpty+"."+SubInclStruct+".int")
 			a.So(enc, s.ShouldNotContainKey, InclStructPtrEmpty+".int")
 			a.So(enc, s.ShouldNotContainKey, InclStructPtrEmpty+"."+SubInclStruct+".int")
+
+			if arg, ok := arg.(testStruct); ok {
+				arg.IntPtr = nil
+				arg.Int8Ptr = nil
+				arg.Int16Ptr = nil
+				arg.Int32Ptr = nil
+				arg.Int64Ptr = nil
+				arg.UintPtr = nil
+				arg.Uint8Ptr = nil
+				arg.Uint16Ptr = nil
+				arg.Uint32Ptr = nil
+				arg.Uint64Ptr = nil
+				arg.Float32Ptr = nil
+				arg.Float64Ptr = nil
+				arg.BoolPtr = nil
+				arg.StringPtr = nil
+
+				enc, err := ToStringInterfaceMap(testTag, arg)
+				a.So(err, s.ShouldBeNil)
+
+				a.So(enc[IntPtr], s.ShouldEqual, nil)
+				a.So(enc[Int8Ptr], s.ShouldEqual, nil)
+				a.So(enc[Int16Ptr], s.ShouldEqual, nil)
+				a.So(enc[Int32Ptr], s.ShouldEqual, nil)
+				a.So(enc[Int64Ptr], s.ShouldEqual, nil)
+				a.So(enc[UintPtr], s.ShouldEqual, nil)
+				a.So(enc[Uint8Ptr], s.ShouldEqual, nil)
+				a.So(enc[Uint16Ptr], s.ShouldEqual, nil)
+				a.So(enc[Uint32Ptr], s.ShouldEqual, nil)
+				a.So(enc[Uint64Ptr], s.ShouldEqual, nil)
+				a.So(enc[Float32Ptr], s.ShouldEqual, nil)
+				a.So(enc[Float64Ptr], s.ShouldEqual, nil)
+				a.So(enc[BoolPtr], s.ShouldEqual, nil)
+				a.So(enc[StringPtr], s.ShouldEqual, nil)
+			}
+
 		})
 	}
 }
