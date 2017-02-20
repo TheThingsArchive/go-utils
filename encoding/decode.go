@@ -132,25 +132,23 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 
 		var iface interface{}
 
-		if fieldKind == reflect.Struct {
-			if opts.Has("include") {
-				subInput := make(map[string]string)
-				for k, v := range input {
-					if strings.HasPrefix(k, fieldName+".") {
-						subInput[strings.TrimPrefix(k, fieldName+".")] = v
-					}
+		if opts.Has("include") && fieldKind == reflect.Struct {
+			subInput := make(map[string]string)
+			for k, v := range input {
+				if strings.HasPrefix(k, fieldName+".") {
+					subInput[strings.TrimPrefix(k, fieldName+".")] = v
 				}
-
-				if len(subInput) == 0 {
-					continue
-				}
-
-				subOutput, err := FromStringStringMap(tagName, val.Field(i).Interface(), subInput)
-				if err != nil {
-					return nil, err
-				}
-				val.Field(i).Set(reflect.ValueOf(subOutput))
 			}
+
+			if len(subInput) == 0 {
+				continue
+			}
+
+			subOutput, err := FromStringStringMap(tagName, val.Field(i).Interface(), subInput)
+			if err != nil {
+				return nil, err
+			}
+			val.Field(i).Set(reflect.ValueOf(subOutput))
 			continue
 		}
 
@@ -159,7 +157,7 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 		}
 
 		switch fieldKind {
-		case reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
+		case reflect.Struct, reflect.Array, reflect.Interface, reflect.Slice, reflect.Map:
 			iface, err = unmarshalToType(fieldType, inputStr)
 			if err != nil {
 				return nil, err
