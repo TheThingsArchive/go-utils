@@ -52,18 +52,23 @@ func conflict(i, j ScheduleItem) bool {
 
 type schedule struct {
 	*jitQueue
-	lastItem ScheduleItem
+	lastFinished time.Time
 }
 
 // NewSchedule returns a new Schedule
 func NewSchedule() Schedule {
 	return &schedule{
-		jitQueue: NewJIT().(*jitQueue),
+		jitQueue:     NewJIT().(*jitQueue),
+		lastFinished: time.Now(),
 	}
 }
 
 func (q *schedule) conflicts(i ScheduleItem) (conflicts int) {
-	for _, qd := range q.queue {
+	queue := q.queue
+	if i.Time().Before(q.lastFinished) {
+		conflicts++
+	}
+	for _, qd := range queue {
 		if qd, ok := qd.(ScheduleItem); ok {
 			if conflict(i, qd) {
 				conflicts++
@@ -107,8 +112,8 @@ func (q *schedule) Next() interface{} {
 	q.nextMu.Lock()
 	defer q.nextMu.Unlock()
 	next := q.jitQueue.next()
-	if next, ok := next.(ScheduleItem); ok {
-		q.lastItem = next
+	if next, ok := next.(ScheduleItem); ok && next.Time().After(q.lastFinished) {
+		q.lastFinished = next.Time().Add(next.Duration())
 	}
 	if next, ok := next.(*scheduleItem); ok {
 		return next.item

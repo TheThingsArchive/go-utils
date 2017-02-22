@@ -98,10 +98,12 @@ func TestScheduleASAP(t *testing.T) {
 
 	{
 		q := NewSchedule()
-		q.Schedule("1", time.Now(), block)
-		q.Schedule("2", time.Now().Add(block/2), block)
-		q.Schedule("4", time.Now().Add(block*3), block)
-		a.So(q.ScheduleASAP("3", block), ShouldHappenWithin, time.Millisecond, time.Now().Add(block/2+block))
+		q.Schedule("0", time.Now().Add(-1*block), block*2)                                                    // from -1 to 1 block
+		q.Next()                                                                                              // removed from schedule, but still a conflict
+		q.Schedule("1", time.Now(), block)                                                                    // from 0 to 1 block
+		q.Schedule("2", time.Now().Add(block/2), block)                                                       // from 0.5 to 1.5 block
+		q.Schedule("4", time.Now().Add(block*3), block)                                                       // from 3 to 4 block
+		a.So(q.ScheduleASAP("3", block), ShouldHappenWithin, time.Millisecond, time.Now().Add(block/2+block)) // from 1.5 to 2.5 block
 	}
 
 }
