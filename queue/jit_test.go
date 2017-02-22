@@ -38,26 +38,33 @@ func TestJITQueue(t *testing.T) {
 	time.Sleep(waitTime / 2)
 	q.Schedule("second", now.Add(waitTime*2))
 
-	wg.Wait()
+	wg.Wait() // Wait for the first
+
+	a.So(q.Next(), ShouldEqual, "second")
+	a.So(q.Next(), ShouldEqual, "last")
+
+	q.Schedule("concurrent A", now.Add(waitTime*4))
+	q.Schedule("concurrent B", now.Add(waitTime*4))
+
 	wg.Add(2)
-
 	go func() {
-		q.Next()
+		a.So(q.Next(), ShouldStartWith, "concurrent")
 		wg.Done()
 	}()
 	go func() {
-		q.Next()
+		a.So(q.Next(), ShouldStartWith, "concurrent")
 		wg.Done()
 	}()
+	wg.Wait() // wait for the concurrent ones
 
-	wg.Wait()
 	wg.Add(1)
-
 	go func() {
 		a.So(q.Next(), ShouldBeNil)
 		wg.Done()
 	}()
 
 	q.Clean()
+
+	wg.Wait()
 
 }
