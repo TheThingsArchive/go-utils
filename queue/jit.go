@@ -66,7 +66,20 @@ func (q *jitQueue) Add(i JITItem) {
 
 func (q *jitQueue) add(i JITItem) {
 	q.queue = append(q.queue, i)
+	first := q.queue[0]
+
+	// Don't sort when item was appended chronologically (in existing queue)
+	if len(q.queue) > 1 && q.queue[len(q.queue)-1].Time().After(q.queue[len(q.queue)-2].Time()) {
+		return
+	}
+
 	sort.Sort(q.queue)
+
+	// don't notify if first item (in existing queue) unchanged
+	if len(q.queue) > 1 && first == q.queue[0] {
+		return
+	}
+
 	close(q.changed)
 	q.changed = make(chan struct{})
 }
@@ -92,6 +105,15 @@ func (q *jitQueue) next() interface{} {
 		changed := q.changed
 		if !q.isEmpty() {
 			i = q.queue[0]
+			// immediately send expired items
+			if i.Time().Before(time.Now()) {
+				defer q.mu.Unlock()
+				q.queue = q.queue[1:]
+				if i, ok := i.(*jitItem); ok {
+					return i.item
+				}
+				return i
+			}
 		}
 		q.mu.Unlock()
 
