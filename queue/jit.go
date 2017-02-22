@@ -14,6 +14,12 @@ type JITItem interface {
 	Time() time.Time
 }
 
+type item interface{}
+
+type hasItem interface {
+	getItem() item
+}
+
 type jitItem struct {
 	item interface{}
 	time time.Time
@@ -21,6 +27,10 @@ type jitItem struct {
 
 func (i *jitItem) Time() time.Time {
 	return i.time
+}
+
+func (i *jitItem) getItem() item {
+	return i.item
 }
 
 // JIT is a just-in-time implementation of the Queue. It allows setting a time for each item in the queue. The item will
@@ -91,7 +101,14 @@ func (q *jitQueue) Schedule(i interface{}, time time.Time) {
 func (q *jitQueue) Next() interface{} {
 	q.nextMu.Lock()
 	defer q.nextMu.Unlock()
-	return q.next()
+	next := q.next()
+	if next == nil {
+		return nil
+	}
+	if next, ok := next.(hasItem); ok {
+		return next.getItem()
+	}
+	return next
 }
 
 func (q *jitQueue) next() interface{} {
@@ -109,9 +126,6 @@ func (q *jitQueue) next() interface{} {
 			if i.Time().Before(time.Now()) {
 				defer q.mu.Unlock()
 				q.queue = q.queue[1:]
-				if i, ok := i.(*jitItem); ok {
-					return i.item
-				}
 				return i
 			}
 		}
@@ -130,9 +144,6 @@ func (q *jitQueue) next() interface{} {
 			if !q.isEmpty() && i == q.queue[0] {
 				defer q.mu.Unlock()
 				q.queue = q.queue[1:]
-				if i, ok := i.(*jitItem); ok {
-					return i.item
-				}
 				return i
 			}
 			// this is highly unlikely

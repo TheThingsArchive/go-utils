@@ -15,23 +15,51 @@ import (
 func TestSchedulingConflicts(t *testing.T) {
 	a := New(t)
 
-	base := new(scheduleItem)
+	base := new(scheduleItemWithTimestamp)
 	base.time = time.Now()
+	base.timestamp = base.time.UnixNano()
 	base.duration = 10 * time.Second
 
-	var test = func(startOffset, duration time.Duration) bool {
+	var testTime = func(startOffset, duration time.Duration) bool {
 		obj := new(scheduleItem)
 		obj.time = base.time.Add(startOffset * time.Second)
 		obj.duration = duration * time.Second
 		return conflict(base, obj)
 	}
 
-	a.So(test(-10, 20), ShouldBeTrue)
-	a.So(test(-10, 1), ShouldBeFalse)
-	a.So(test(-1, 2), ShouldBeTrue)
-	a.So(test(4, 2), ShouldBeTrue)
-	a.So(test(9, 2), ShouldBeTrue)
-	a.So(test(20, 1), ShouldBeFalse)
+	var testTimestamp = func(startOffset, duration time.Duration) bool {
+		obj := new(scheduleItemWithTimestamp)
+		obj.time = base.time.Add(startOffset * time.Second)
+		obj.timestamp = obj.time.UnixNano()
+		obj.duration = duration * time.Second
+		return conflict(base, obj)
+	}
+
+	for _, test := range []func(time.Duration, time.Duration) bool{
+		testTime, testTimestamp,
+	} {
+		a.So(test(-10, 20), ShouldBeTrue)
+		a.So(test(-10, 1), ShouldBeFalse)
+		a.So(test(-1, 2), ShouldBeTrue)
+		a.So(test(4, 2), ShouldBeTrue)
+		a.So(test(9, 2), ShouldBeTrue)
+		a.So(test(20, 1), ShouldBeFalse)
+	}
+
+	{
+		q := NewSchedule()
+		a.So(q.Schedule("0", base.time, base.duration), ShouldEqual, 0)
+		q.Next()
+		a.So(q.Schedule("1", base.time.Add(base.duration+1), base.duration), ShouldEqual, 0)
+		a.So(q.Schedule("2", base.time.Add(base.duration-1), base.duration), ShouldEqual, 2)
+	}
+
+	{
+		q := NewSchedule()
+		a.So(q.ScheduleWithTimestamp("0", base.time, 0, 10), ShouldEqual, 0)
+		a.So(q.ScheduleWithTimestamp("1", base.time, 11, 10), ShouldEqual, 0)
+		a.So(q.ScheduleWithTimestamp("2", base.time, 9, 10), ShouldEqual, 2)
+	}
 
 }
 
@@ -80,6 +108,8 @@ func TestScheduleQueue(t *testing.T) {
 		a.So(q.Next(), ShouldBeNil)
 		wg.Done()
 	}()
+
+	q.ScheduleWithTimestamp("useless", now.Add(waitTime*4), now.Add(waitTime*4).UnixNano(), waitTime)
 
 	q.Clean()
 

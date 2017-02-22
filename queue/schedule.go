@@ -18,6 +18,10 @@ type Schedule interface {
 	// this func returns the number of conflicts based on item time and duration
 	Schedule(i interface{}, time time.Time, duration time.Duration) int
 
+	// Schedule an item at the given time+timestamp, with the given duration
+	// this func returns the number of conflicts based on item timestamp and duration
+	ScheduleWithTimestamp(i interface{}, time time.Time, timestamp int64, duration time.Duration) int
+
 	// ScheduleASAP schedules an item as soon as possible, given its duration and considering the existing Schedule
 	// this func returns the time at which the item is scheduled
 	ScheduleASAP(i interface{}, duration time.Duration) time.Time
@@ -28,7 +32,7 @@ type scheduleItem struct {
 	duration time.Duration
 }
 
-func (s *scheduleItem) Duration() time.Duration {
+func (s scheduleItem) Duration() time.Duration {
 	return s.duration
 }
 
@@ -38,13 +42,42 @@ type ScheduleItem interface {
 	Duration() time.Duration
 }
 
+type scheduleItemWithTimestamp struct {
+	scheduleItem
+	timestamp int64
+}
+
+func (s scheduleItemWithTimestamp) Timestamp() int64 {
+	return s.timestamp
+}
+
+// ScheduleItemWithTimestamp has a Timestamp() and Duration()
+type ScheduleItemWithTimestamp interface {
+	Timestamp() int64
+	Duration() time.Duration
+}
+
 func conflict(i, j ScheduleItem) bool {
-	// i ended before j started
-	if i.Time().Add(i.Duration()).Before(j.Time()) {
+	iStart := i.Time().UnixNano()
+	iEnd := iStart + i.Duration().Nanoseconds()
+	jStart := j.Time().UnixNano()
+	jEnd := jStart + j.Duration().Nanoseconds()
+
+	// Compare on Timestamp if possible
+	if i, ok := i.(ScheduleItemWithTimestamp); ok {
+		iStart = i.Timestamp()
+		iEnd = iStart + i.Duration().Nanoseconds()
+	}
+
+	if j, ok := j.(ScheduleItemWithTimestamp); ok {
+		jStart = j.Timestamp()
+		jEnd = jStart + j.Duration().Nanoseconds()
+	}
+
+	if iEnd < jStart {
 		return false
 	}
-	// j ended before i started
-	if j.Time().Add(j.Duration()).Before(i.Time()) {
+	if jEnd < iStart {
 		return false
 	}
 	return true
@@ -58,8 +91,7 @@ type schedule struct {
 // NewSchedule returns a new Schedule
 func NewSchedule() Schedule {
 	return &schedule{
-		jitQueue:     NewJIT().(*jitQueue),
-		lastFinished: time.Now(),
+		jitQueue: NewJIT().(*jitQueue),
 	}
 }
 
@@ -90,6 +122,10 @@ func (q *schedule) Schedule(i interface{}, time time.Time, duration time.Duratio
 	return q.Add(&scheduleItem{jitItem: jitItem{item: i, time: time}, duration: duration})
 }
 
+func (q *schedule) ScheduleWithTimestamp(i interface{}, time time.Time, timestamp int64, duration time.Duration) int {
+	return q.Add(&scheduleItemWithTimestamp{scheduleItem: scheduleItem{jitItem: jitItem{item: i, time: time}, duration: duration}, timestamp: timestamp})
+}
+
 func (q *schedule) ScheduleASAP(i interface{}, duration time.Duration) time.Time {
 	q.mu.Lock()
 	defer q.mu.Unlock()
@@ -112,11 +148,14 @@ func (q *schedule) Next() interface{} {
 	q.nextMu.Lock()
 	defer q.nextMu.Unlock()
 	next := q.jitQueue.next()
+	if next == nil {
+		return nil
+	}
 	if next, ok := next.(ScheduleItem); ok && next.Time().After(q.lastFinished) {
 		q.lastFinished = next.Time().Add(next.Duration())
 	}
-	if next, ok := next.(*scheduleItem); ok {
-		return next.item
+	if next, ok := next.(hasItem); ok {
+		return next.getItem()
 	}
 	return next
 }
