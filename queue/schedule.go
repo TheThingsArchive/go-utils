@@ -6,21 +6,21 @@ package queue
 import "time"
 
 // Schedule is an extension of the JIT Queue that allows setting a duration next to the time of an item.
-// This allows to calculate the number of conflicts that an item has
+// This allows to calculate the conflicts that an item has
 type Schedule interface {
 	Base
 
 	// Add an Item to the Schedule, queued to be returned at item.Time(),
-	// this func returns the number of conflicts based on item.Time() and item.Duration()
-	Add(item ScheduleItem) int
+	// this func returns the conflicts based on item.Time() and item.Duration()
+	Add(item ScheduleItem) []ScheduleItem
 
 	// Schedule an item at the given time, with the given duration
-	// this func returns the number of conflicts based on item time and duration
-	Schedule(i interface{}, time time.Time, duration time.Duration) int
+	// this func returns the conflicts based on item time and duration
+	Schedule(i interface{}, time time.Time, duration time.Duration) []ScheduleItem
 
 	// Schedule an item at the given time+timestamp, with the given duration
-	// this func returns the number of conflicts based on item timestamp and duration
-	ScheduleWithTimestamp(i interface{}, time time.Time, timestamp int64, duration time.Duration) int
+	// this func returns the conflicts based on item timestamp and duration
+	ScheduleWithTimestamp(i interface{}, time time.Time, timestamp int64, duration time.Duration) []ScheduleItem
 
 	// ScheduleASAP schedules an item as soon as possible, given its duration and considering the existing Schedule
 	// this func returns the time at which the item is scheduled
@@ -57,27 +57,24 @@ type ScheduleItemWithTimestamp interface {
 	Duration() time.Duration
 }
 
-func conflict(i, j ScheduleItem) bool {
-	iStart := i.Time().UnixNano()
-	iEnd := iStart + i.Duration().Nanoseconds()
+// returns true if i before j
+func before(i, j ScheduleItem) bool {
+	iEnd := i.Time().UnixNano() + i.Duration().Nanoseconds()
 	jStart := j.Time().UnixNano()
-	jEnd := jStart + j.Duration().Nanoseconds()
-
-	// Compare on Timestamp if possible
 	if i, ok := i.(ScheduleItemWithTimestamp); ok {
-		iStart = i.Timestamp()
-		iEnd = iStart + i.Duration().Nanoseconds()
+		if j, ok := j.(ScheduleItemWithTimestamp); ok {
+			iEnd = i.Timestamp() + i.Duration().Nanoseconds()
+			jStart = j.Timestamp()
+		}
 	}
+	return iEnd < jStart
+}
 
-	if j, ok := j.(ScheduleItemWithTimestamp); ok {
-		jStart = j.Timestamp()
-		jEnd = jStart + j.Duration().Nanoseconds()
-	}
-
-	if iEnd < jStart {
+func conflict(i, j ScheduleItem) bool {
+	if before(i, j) {
 		return false
 	}
-	if jEnd < iStart {
+	if before(j, i) {
 		return false
 	}
 	return true
@@ -85,7 +82,7 @@ func conflict(i, j ScheduleItem) bool {
 
 type schedule struct {
 	*jitQueue
-	lastFinished time.Time
+	last ScheduleItem
 }
 
 // NewSchedule returns a new Schedule
@@ -95,22 +92,22 @@ func NewSchedule() Schedule {
 	}
 }
 
-func (q *schedule) conflicts(i ScheduleItem) (conflicts int) {
+func (q *schedule) conflicts(i ScheduleItem) (conflicts []ScheduleItem) {
 	queue := q.queue
-	if i.Time().Before(q.lastFinished) {
-		conflicts++
+	if q.last != nil && conflict(i, q.last) {
+		conflicts = append(conflicts, q.last)
 	}
 	for _, qd := range queue {
 		if qd, ok := qd.(ScheduleItem); ok {
 			if conflict(i, qd) {
-				conflicts++
+				conflicts = append(conflicts, qd)
 			}
 		}
 	}
 	return
 }
 
-func (q *schedule) Add(i ScheduleItem) (conflicts int) {
+func (q *schedule) Add(i ScheduleItem) (conflicts []ScheduleItem) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	conflicts = q.conflicts(i)
@@ -118,11 +115,11 @@ func (q *schedule) Add(i ScheduleItem) (conflicts int) {
 	return
 }
 
-func (q *schedule) Schedule(i interface{}, time time.Time, duration time.Duration) int {
+func (q *schedule) Schedule(i interface{}, time time.Time, duration time.Duration) []ScheduleItem {
 	return q.Add(&scheduleItem{jitItem: jitItem{item: i, time: time}, duration: duration})
 }
 
-func (q *schedule) ScheduleWithTimestamp(i interface{}, time time.Time, timestamp int64, duration time.Duration) int {
+func (q *schedule) ScheduleWithTimestamp(i interface{}, time time.Time, timestamp int64, duration time.Duration) []ScheduleItem {
 	return q.Add(&scheduleItemWithTimestamp{scheduleItem: scheduleItem{jitItem: jitItem{item: i, time: time}, duration: duration}, timestamp: timestamp})
 }
 
@@ -136,7 +133,7 @@ func (q *schedule) ScheduleASAP(i interface{}, duration time.Duration) time.Time
 		} else {
 			continue
 		}
-		if q.conflicts(candidate) == 0 {
+		if len(q.conflicts(candidate)) == 0 {
 			break
 		}
 	}
@@ -151,8 +148,8 @@ func (q *schedule) Next() interface{} {
 	if next == nil {
 		return nil
 	}
-	if next, ok := next.(ScheduleItem); ok && next.Time().After(q.lastFinished) {
-		q.lastFinished = next.Time().Add(next.Duration())
+	if next, ok := next.(ScheduleItem); ok && (q.last == nil || before(q.last, next)) {
+		q.last = next
 	}
 	if next, ok := next.(hasItem); ok {
 		return next.getItem()
