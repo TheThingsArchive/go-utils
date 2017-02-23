@@ -63,7 +63,7 @@ func (q *simpleQueue) isEmpty() bool {
 	return len(q.queue) == 0
 }
 
-func (q *simpleQueue) Clean() {
+func (q *simpleQueue) Destroy() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.queue = make([]interface{}, 0)

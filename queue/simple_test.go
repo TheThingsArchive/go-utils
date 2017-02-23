@@ -49,7 +49,7 @@ func TestSimpleQueue(t *testing.T) {
 
 	time.Sleep(sleepTime)
 
-	q.Clean()
+	q.Destroy()
 
 	wg.Wait()
 

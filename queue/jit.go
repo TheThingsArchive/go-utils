@@ -60,7 +60,7 @@ type jitQueue struct {
 	changed chan struct{}
 }
 
-// NewJIT returns a new JIT Queue
+// NewJIT returns a new JIT Queue (see JIT interface)
 func NewJIT() JIT {
 	return &jitQueue{
 		queue:   make([]JITItem, 0),
@@ -166,7 +166,7 @@ func (q *jitQueue) isEmpty() bool {
 	return len(q.queue) == 0
 }
 
-func (q *jitQueue) Clean() {
+func (q *jitQueue) Destroy() {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.queue = make([]JITItem, 0)

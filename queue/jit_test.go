@@ -63,7 +63,7 @@ func TestJITQueue(t *testing.T) {
 		wg.Done()
 	}()
 
-	q.Clean()
+	q.Destroy()
 
 	wg.Wait()
 

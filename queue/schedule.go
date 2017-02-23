@@ -85,7 +85,7 @@ type schedule struct {
 	last ScheduleItem
 }
 
-// NewSchedule returns a new Schedule
+// NewSchedule returns a new Schedule (see Schedule interface)
 func NewSchedule() Schedule {
 	return &schedule{
 		jitQueue: NewJIT().(*jitQueue),

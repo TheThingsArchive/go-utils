@@ -7,11 +7,11 @@ package queue
 // Base interface for Queue
 type Base interface {
 	// Next item in the Queue, this function blocks until the next item is available.
-	// It returns <nil> to all callers when Clean() is called.
+	// It returns <nil> to all callers when Destroy() is called.
 	Next() interface{}
 
 	IsEmpty() bool
 
-	// Clean up the queue
-	Clean()
+	// Destroy the queue
+	Destroy()
 }

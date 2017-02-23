@@ -111,7 +111,7 @@ func TestScheduleQueue(t *testing.T) {
 
 	q.ScheduleWithTimestamp("useless", now.Add(waitTime*4), now.Add(waitTime*4).UnixNano(), waitTime)
 
-	q.Clean()
+	q.Destroy()
 
 	q.Schedule("too late", time.Now(), waitTime) // nothing should happen
 }
