@@ -67,4 +67,5 @@ func TestJITQueue(t *testing.T) {
 
 	wg.Wait()
 
+	q.Schedule("too late", time.Now()) // nothing should happen
 }

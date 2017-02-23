@@ -75,6 +75,10 @@ func (q *jitQueue) Add(i JITItem) {
 }
 
 func (q *jitQueue) add(i JITItem) {
+	if q.changed == nil {
+		return
+	}
+
 	q.queue = append(q.queue, i)
 	first := q.queue[0]
 

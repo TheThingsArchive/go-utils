@@ -113,6 +113,7 @@ func TestScheduleQueue(t *testing.T) {
 
 	q.Clean()
 
+	q.Schedule("too late", time.Now(), waitTime) // nothing should happen
 }
 
 func TestScheduleASAP(t *testing.T) {
