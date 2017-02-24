@@ -66,13 +66,14 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 		}
 
 		fieldName, opts := parseTag(field.Tag(tagName))
-		if fieldName == "" || fieldName == "-" {
+		squash, omitempty, include := opts.Has("squash"), opts.Has("omitempty"), opts.Has("include")
+		if !squash && (fieldName == "" || fieldName == "-") {
 			continue
 		}
 
 		val := field.Value()
 
-		if opts.Has("omitempty") {
+		if omitempty {
 			if field.IsZero() {
 				continue
 			}
@@ -88,7 +89,9 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 		if kind == reflect.Ptr {
 			v := reflect.ValueOf(val)
 			if v.IsNil() {
-				vmap[fieldName] = ""
+				if fieldName != "" && fieldName != "-" {
+					vmap[fieldName] = ""
+				}
 				continue
 			}
 			elem := v.Elem()
@@ -96,7 +99,7 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			val = elem.Interface()
 		}
 
-		if opts.Has("include") && kind == reflect.Struct {
+		if (squash || include) && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
 				if strings.HasPrefix(prop, fieldName+".") {
@@ -107,8 +110,14 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			if err != nil {
 				return nil, err
 			}
+
+			var prefix string
+			if !squash {
+				prefix = fieldName + "."
+			}
+
 			for k, v := range m {
-				vmap[fieldName+"."+k] = v
+				vmap[prefix+k] = v
 			}
 			continue
 		}
@@ -177,13 +186,14 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 		}
 
 		fieldName, opts := parseTag(field.Tag(tagName))
-		if fieldName == "" || fieldName == "-" {
+		squash, omitempty, include := opts.Has("squash"), opts.Has("omitempty"), opts.Has("include")
+		if !squash && (fieldName == "" || fieldName == "-") {
 			continue
 		}
 
 		val := field.Value()
 
-		if opts.Has("omitempty") {
+		if omitempty {
 			if field.IsZero() {
 				continue
 			}
@@ -199,7 +209,9 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 		if kind == reflect.Ptr {
 			v := reflect.ValueOf(val)
 			if v.IsNil() {
-				vmap[fieldName] = nil
+				if fieldName != "" && fieldName != "-" {
+					vmap[fieldName] = nil
+				}
 				continue
 			}
 			elem := v.Elem()
@@ -207,7 +219,7 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 			val = elem.Interface()
 		}
 
-		if opts.Has("include") && kind == reflect.Struct {
+		if (squash || include) && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
 				if strings.HasPrefix(prop, fieldName+".") {
@@ -218,8 +230,14 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 			if err != nil {
 				return nil, err
 			}
+
+			var prefix string
+			if !squash {
+				prefix = fieldName + "."
+			}
+
 			for k, v := range m {
-				vmap[fieldName+"."+k] = v
+				vmap[prefix+k] = v
 			}
 			continue
 		}

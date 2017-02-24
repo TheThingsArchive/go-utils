@@ -115,7 +115,8 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 		}
 
 		fieldName, opts := parseTag(field.Tag.Get(tagName))
-		if fieldName == "" || fieldName == "-" {
+		squash, include := opts.Has("squash"), opts.Has("include")
+		if !squash && (fieldName == "" || fieldName == "-") {
 			continue
 		}
 
@@ -135,16 +136,22 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 
 		var iface interface{}
 
-		if opts.Has("include") && fieldKind == reflect.Struct {
-			subInput := make(map[string]string)
-			for k, v := range input {
-				if strings.HasPrefix(k, fieldName+".") {
-					subInput[strings.TrimPrefix(k, fieldName+".")] = v
-				}
-			}
+		if (squash || include) && fieldKind == reflect.Struct {
+			var subInput map[string]string
 
-			if len(subInput) == 0 {
-				continue
+			if squash {
+				subInput = input
+			} else {
+				subInput = make(map[string]string)
+				for k, v := range input {
+					if strings.HasPrefix(k, fieldName+".") {
+						subInput[strings.TrimPrefix(k, fieldName+".")] = v
+					}
+				}
+
+				if len(subInput) == 0 {
+					continue
+				}
 			}
 
 			subOutput, err := FromStringStringMap(tagName, val.Field(i).Interface(), subInput)
