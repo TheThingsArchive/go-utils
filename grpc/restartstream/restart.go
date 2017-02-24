@@ -22,6 +22,8 @@ type restartingStream struct {
 	streamer grpc.Streamer
 	opts     []grpc.CallOption
 
+	done chan struct{}
+
 	sync.RWMutex
 	grpc.ClientStream
 	closing bool
@@ -58,13 +60,25 @@ func (s *restartingStream) RecvMsg(m interface{}) error {
 	closing := s.closing
 	s.RUnlock()
 
-	if closing || err == io.EOF {
+	if closing {
+		return err
+	}
+
+	if s.desc.ServerStreams && err == io.EOF {
+		close(s.done)
 		return err
 	}
 
 	s.start()
 
 	return err
+}
+
+func (s *restartingStream) CloseSend() error {
+	if s.desc.ClientStreams && !s.desc.ServerStreams {
+		close(s.done)
+	}
+	return s.ClientStream.CloseSend()
 }
 
 // Interceptor automatically restarts streams on non-expected errors
@@ -82,11 +96,15 @@ func Interceptor(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn
 	s.method = method
 	s.streamer = streamer
 	s.opts = opts
+	s.done = make(chan struct{})
 
 	s.log = log.Get().WithField("Method", method)
 
 	go func() {
-		<-ctx.Done()
+		select {
+		case <-ctx.Done(): // canceled
+		case <-s.done: // eof
+		}
 		s.Lock()
 		defer s.Unlock()
 		s.closing = true
