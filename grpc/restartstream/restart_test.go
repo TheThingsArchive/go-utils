@@ -14,6 +14,7 @@ import (
 	. "github.com/TheThingsNetwork/go-utils/grpc/restartstream/restartstreamtest"
 	"github.com/TheThingsNetwork/go-utils/log"
 	"github.com/htdvisser/grpc-testing/test"
+	grpc_middleware "github.com/mwitkow/go-grpc-middleware"
 	. "github.com/smartystreets/assertions"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -44,7 +45,8 @@ func TestReconnect(t *testing.T) {
 	go s.Serve(lis)
 
 	addr := "localhost:" + port
-	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithStreamInterceptor(Interceptor))
+	breakStream := NewCancel()
+	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(Interceptor, breakStream.Interceptor)))
 	if err != nil {
 		t.Fatalf("Dial(%q) = %v", addr, err)
 	}
@@ -99,6 +101,11 @@ func TestReconnect(t *testing.T) {
 		time.Sleep(sleepTime)
 		a.So(server.PushFoo, ShouldNotBeNil)
 		a.So(server.PushFoo.Foo, ShouldEqual, "ok again")
+		time.Sleep(sleepTime)
+
+		// break the stream
+		breakStream.Cancel()
+		time.Sleep(sleepTime)
 
 		err = stream.Send(&Foo{Foo: "and again"})
 		a.So(err, ShouldBeNil)
