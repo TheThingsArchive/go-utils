@@ -14,6 +14,12 @@ type Schedule interface {
 	// this func returns the conflicts based on item.Time() and item.Duration()
 	Add(item ScheduleItem) []ScheduleItem
 
+	// Conflicts based on time and duration
+	Conflicts(time time.Time, duration time.Duration) []ScheduleItem
+
+	// Conflicts based on timestamp and duration
+	ConflictsForTimestamp(timestamp int64, duration time.Duration) []ScheduleItem
+
 	// Schedule an item at the given time, with the given duration
 	// this func returns the conflicts based on item time and duration
 	Schedule(i interface{}, time time.Time, duration time.Duration) []ScheduleItem
@@ -90,6 +96,18 @@ func NewSchedule() Schedule {
 	return &schedule{
 		jitQueue: NewJIT().(*jitQueue),
 	}
+}
+
+func (q *schedule) Conflicts(time time.Time, duration time.Duration) []ScheduleItem {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.conflicts(&scheduleItem{jitItem: jitItem{time: time}, duration: duration})
+}
+
+func (q *schedule) ConflictsForTimestamp(timestamp int64, duration time.Duration) []ScheduleItem {
+	q.mu.Lock()
+	defer q.mu.Unlock()
+	return q.conflicts(&scheduleItemWithTimestamp{scheduleItem: scheduleItem{duration: duration}, timestamp: timestamp})
 }
 
 func (q *schedule) conflicts(i ScheduleItem) (conflicts []ScheduleItem) {
