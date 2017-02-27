@@ -50,14 +50,18 @@ func TestSchedulingConflicts(t *testing.T) {
 		q := NewSchedule()
 		a.So(q.Schedule("0", base.time, base.duration), ShouldHaveLength, 0)
 		q.Next()
+		a.So(q.Conflicts(base.time.Add(base.duration+1), base.duration), ShouldHaveLength, 0)
 		a.So(q.Schedule("1", base.time.Add(base.duration+1), base.duration), ShouldHaveLength, 0)
+		a.So(q.Conflicts(base.time.Add(base.duration-1), base.duration), ShouldHaveLength, 2)
 		a.So(q.Schedule("2", base.time.Add(base.duration-1), base.duration), ShouldHaveLength, 2)
 	}
 
 	{
 		q := NewSchedule()
 		a.So(q.ScheduleWithTimestamp("0", base.time, 0, 10), ShouldHaveLength, 0)
+		a.So(q.ConflictsForTimestamp(11, 10), ShouldHaveLength, 0)
 		a.So(q.ScheduleWithTimestamp("1", base.time, 11, 10), ShouldHaveLength, 0)
+		a.So(q.ConflictsForTimestamp(9, 10), ShouldHaveLength, 2)
 		a.So(q.ScheduleWithTimestamp("2", base.time, 9, 10), ShouldHaveLength, 2)
 	}
 
