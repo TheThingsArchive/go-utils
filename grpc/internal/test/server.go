@@ -3,7 +3,7 @@
 
 //go:generate protoc --gogoslick_out=plugins=grpc:. test.proto
 
-package restartstreamtest
+package test
 
 import (
 	"io"
@@ -15,10 +15,12 @@ import (
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 )
 
 type TestServerImplementation struct {
 	log     log.Interface
+	Token   string
 	GetFoo  *Foo
 	PushFoo *Foo
 	PullFoo *Foo
@@ -33,8 +35,20 @@ func NewTestServer() *TestServerImplementation {
 	}
 }
 
+func (s *TestServerImplementation) req(ctx context.Context) {
+	if md, ok := metadata.FromContext(ctx); ok {
+		if token, ok := md["token"]; ok && len(token) > 0 {
+			s.Token = token[0]
+			return
+		}
+	}
+	s.Token = ""
+}
+
 func (s *TestServerImplementation) Get(ctx context.Context, foo *Foo) (*Bar, error) {
 	s.log.WithField("Method", "Get").WithField("Foo", foo).Debugf("[SERVER] Request")
+	s.req(ctx)
+
 	if foo.GetFoo() == "not ok" {
 		return nil, grpc.Errorf(codes.InvalidArgument, "Foo not ok")
 	}
@@ -44,6 +58,7 @@ func (s *TestServerImplementation) Get(ctx context.Context, foo *Foo) (*Bar, err
 
 func (s *TestServerImplementation) Push(stream Test_PushServer) error {
 	s.log.WithField("Method", "Push").Debugf("[SERVER] Start")
+	s.req(stream.Context())
 
 	var streamErr atomic.Value
 	go func() {
@@ -77,6 +92,8 @@ func (s *TestServerImplementation) Push(stream Test_PushServer) error {
 
 func (s *TestServerImplementation) Pull(foo *Foo, stream Test_PullServer) (err error) {
 	s.log.WithField("Method", "Pull").WithField("Foo", foo).Debugf("[SERVER] Start")
+	s.req(stream.Context())
+
 	if foo.GetFoo() == "not ok" {
 		return grpc.Errorf(codes.InvalidArgument, "Foo not ok")
 	}
@@ -111,6 +128,7 @@ func (s *TestServerImplementation) Pull(foo *Foo, stream Test_PullServer) (err e
 
 func (s *TestServerImplementation) Sync(stream Test_SyncServer) error {
 	s.log.WithField("Method", "Sync").Debugf("[SERVER] Start")
+	s.req(stream.Context())
 
 	var streamErr atomic.Value
 	go func() {

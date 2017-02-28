@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/TheThingsNetwork/go-utils/grpc/restartstream/restartstreamtest"
+	. "github.com/TheThingsNetwork/go-utils/grpc/internal/test"
 	"github.com/TheThingsNetwork/go-utils/log"
 	"github.com/htdvisser/grpc-testing/test"
 	grpc_middleware "github.com/mwitkow/go-grpc-middleware"

@@ -2,7 +2,7 @@
 
 syntax = "proto3";
 
-package restartstreamtest;
+package test;
 
 message Foo {
   string foo = 1;

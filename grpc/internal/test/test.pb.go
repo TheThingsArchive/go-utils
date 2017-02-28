@@ -3,7 +3,7 @@
 // DO NOT EDIT!
 
 /*
-Package restartstreamtest is a generated protocol buffer package.
+Package test is a generated protocol buffer package.
 
 It is generated from these files:
 	test.proto
@@ -12,7 +12,7 @@ It has these top-level messages:
 	Foo
 	Bar
 */
-package restartstreamtest
+package test
 
 import proto "github.com/gogo/protobuf/proto"
 import fmt "fmt"
