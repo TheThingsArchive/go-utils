@@ -174,6 +174,58 @@ func TestReconnect(t *testing.T) {
 
 	testPull("ok", true)
 
-	// TODO(htdvisser): Sync method
+	var testSync = func(doCancel bool) {
+		ctx, cancel := context.WithCancel(context.Background())
+		stream, err := cli.Sync(ctx)
+		a.So(err, ShouldBeNil)
+
+		go func() {
+			for {
+				bar, err := stream.Recv()
+				if err == io.EOF || grpc.Code(err) == codes.Canceled {
+					log.Get().WithField("Method", "Sync").WithError(err).Debugf("[TEST] EOF")
+					return
+				}
+				if err == nil {
+					log.Get().WithField("Method", "Sync").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
+				} else {
+					log.Get().WithField("Method", "Sync").WithField("Bar", bar).WithError(err).Debugf("[TEST] Recv Err")
+				}
+			}
+		}()
+
+		err = stream.Send(&Foo{Foo: "ok"})
+		a.So(err, ShouldBeNil)
+		time.Sleep(sleepTime)
+		a.So(server.SyncFoo, ShouldNotBeNil)
+		a.So(server.SyncFoo.Foo, ShouldEqual, "ok")
+
+		// not ok breaks the stream
+		err = stream.Send(&Foo{Foo: "not ok"})
+		a.So(err, ShouldBeNil)
+		time.Sleep(sleepTime)
+
+		err = stream.Send(&Foo{Foo: "ok again"})
+		a.So(err, ShouldBeNil)
+		time.Sleep(sleepTime)
+		a.So(server.SyncFoo, ShouldNotBeNil)
+		a.So(server.SyncFoo.Foo, ShouldEqual, "ok again")
+		time.Sleep(sleepTime)
+
+		time.Sleep(2 * sleepTime)
+
+		if doCancel {
+			cancel()
+		} else {
+			stream.CloseSend()
+		}
+
+		time.Sleep(sleepTime)
+
+		testLogger.Print(t)
+	}
+
+	testSync(true)
+	testSync(false)
 
 }

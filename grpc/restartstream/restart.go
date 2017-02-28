@@ -83,7 +83,7 @@ func (s *restartingStream) RecvMsg(m interface{}) error {
 }
 
 func (s *restartingStream) CloseSend() error {
-	if s.desc.ClientStreams && !s.desc.ServerStreams {
+	if s.desc.ClientStreams {
 		close(s.done)
 	}
 	return s.ClientStream.CloseSend()

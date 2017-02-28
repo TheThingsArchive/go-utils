@@ -24,6 +24,7 @@ type TestServerImplementation struct {
 	GetFoo  *Foo
 	PushFoo *Foo
 	PullFoo *Foo
+	SyncFoo *Foo
 }
 
 func NewTestServer() *TestServerImplementation {
@@ -32,6 +33,7 @@ func NewTestServer() *TestServerImplementation {
 		GetFoo:  &Foo{Foo: "none"},
 		PushFoo: &Foo{Foo: "none"},
 		PullFoo: &Foo{Foo: "none"},
+		SyncFoo: &Foo{Foo: "none"},
 	}
 }
 
@@ -144,6 +146,10 @@ func (s *TestServerImplementation) Sync(stream Test_SyncServer) error {
 		}
 
 		foo, err := stream.Recv()
+		if err == io.EOF {
+			s.log.WithField("Method", "Sync").Debugf("[SERVER] EOF")
+			return nil
+		}
 		if err != nil {
 			s.log.WithField("Method", "Sync").WithError(err).Debugf("[SERVER] Error")
 			return err
@@ -160,5 +166,6 @@ func (s *TestServerImplementation) Sync(stream Test_SyncServer) error {
 			s.log.WithField("Method", "Sync").WithError(err).Debugf("[SERVER] Error")
 			return err
 		}
+		s.SyncFoo = foo
 	}
 }
