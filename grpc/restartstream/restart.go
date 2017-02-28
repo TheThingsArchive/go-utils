@@ -10,6 +10,7 @@ import (
 	"github.com/TheThingsNetwork/go-utils/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/peer"
 )
 
 type restartingStream struct {
@@ -32,8 +33,15 @@ type restartingStream struct {
 func (s *restartingStream) start() (err error) {
 	s.Lock()
 	defer s.Unlock()
-	s.log.Debug("restartstream: (re)starting")
 	s.ClientStream, err = s.streamer(s.ctx, s.desc, s.cc, s.method, s.opts...)
+	if err != nil {
+		return
+	}
+	log := s.log
+	if peer, ok := peer.FromContext(s.ClientStream.Context()); ok {
+		log = log.WithField("Peer", peer.Addr)
+	}
+	log.Debug("Stream (re)starting")
 	return
 }
 
