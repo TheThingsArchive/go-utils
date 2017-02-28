@@ -89,6 +89,10 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 		if kind == reflect.Ptr {
 			v := reflect.ValueOf(val)
 			if v.IsNil() {
+				if _, ok := vmap[fieldName]; ok {
+					panic(fmt.Errorf("field names not unique(%s)", fieldName))
+				}
+
 				if fieldName != "" && fieldName != "-" {
 					vmap[fieldName] = ""
 				}
