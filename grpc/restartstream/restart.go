@@ -25,8 +25,9 @@ type Settings struct {
 // DefaultSettings for Interceptor
 var DefaultSettings = Settings{
 	RetryableCodes: []codes.Code{
-		codes.Canceled,
+		codes.Canceled, // context.WithCancel
 		codes.Unknown,
+		codes.DeadlineExceeded, // context.WithDeadline
 		codes.Aborted,
 		codes.Unavailable,
 		codes.Internal,
@@ -139,18 +140,21 @@ func (s *restartingStream) CloseSend() error {
 // To stop the reconnect behaviour, you have to cancel the context
 func Interceptor(settings Settings) grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (stream grpc.ClientStream, err error) {
-		s := new(restartingStream)
-		s.retryableCodes = settings.RetryableCodes
-		s.backoff = settings.Backoff
-		s.ctx = ctx
-		s.desc = desc
-		s.cc = cc
-		s.method = method
-		s.streamer = streamer
-		s.opts = opts
-		s.done = make(chan struct{})
+		s := &restartingStream{
+			log: log.Get().WithField("Method", method),
 
-		s.log = log.Get().WithField("Method", method)
+			ctx:      ctx,
+			desc:     desc,
+			cc:       cc,
+			method:   method,
+			streamer: streamer,
+			opts:     opts,
+
+			retryableCodes: settings.RetryableCodes,
+			backoff:        settings.Backoff,
+
+			done: make(chan struct{}),
+		}
 
 		go func() {
 			select {
