@@ -6,8 +6,10 @@ package restartstream
 import (
 	"io"
 	"sync"
+	"time"
 
 	"github.com/TheThingsNetwork/go-utils/log"
+	"github.com/TheThingsNetwork/ttn/utils/backoff"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -17,6 +19,7 @@ import (
 // Settings for Interceptor
 type Settings struct {
 	RetryableCodes []codes.Code
+	Backoff        backoff.Config
 }
 
 // DefaultSettings for Interceptor
@@ -26,7 +29,9 @@ var DefaultSettings = Settings{
 		codes.Unknown,
 		codes.Aborted,
 		codes.Unavailable,
+		codes.Internal,
 	},
+	Backoff: backoff.DefaultConfig,
 }
 
 type restartingStream struct {
@@ -40,6 +45,8 @@ type restartingStream struct {
 	opts     []grpc.CallOption
 
 	retryableCodes []codes.Code
+	backoff        backoff.Config
+	retries        int
 
 	done chan struct{}
 
@@ -51,15 +58,26 @@ type restartingStream struct {
 func (s *restartingStream) start() (err error) {
 	s.Lock()
 	defer s.Unlock()
-	s.ClientStream, err = s.streamer(s.ctx, s.desc, s.cc, s.method, s.opts...)
-	if err != nil {
-		return
+
+	for {
+		s.log.Debug("Stream (re)starting")
+		s.ClientStream, err = s.streamer(s.ctx, s.desc, s.cc, s.method, s.opts...)
+		if err == nil {
+			s.retries = 0
+			break
+		}
+		s.log.WithField("error", grpc.ErrorDesc(err)).Debug("Stream setup unsuccessful")
+		backoff := s.backoff.Backoff(s.retries)
+		s.log.WithField("Duration", backoff).Debug("Stream backing off")
+		time.Sleep(backoff)
+		s.retries++
 	}
 	log := s.log
 	if peer, ok := peer.FromContext(s.ClientStream.Context()); ok {
 		log = log.WithField("Peer", peer.Addr)
 	}
-	log.Debug("Stream (re)starting")
+	log.Debug("Stream started")
+
 	return
 }
 
@@ -98,7 +116,7 @@ func (s *restartingStream) RecvMsg(m interface{}) error {
 	for _, retryable := range s.retryableCodes {
 		if grpc.Code(err) == retryable {
 			s.start()
-			return err
+			return s.RecvMsg(m)
 		}
 	}
 
@@ -123,6 +141,7 @@ func Interceptor(settings Settings) grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (stream grpc.ClientStream, err error) {
 		s := new(restartingStream)
 		s.retryableCodes = settings.RetryableCodes
+		s.backoff = settings.Backoff
 		s.ctx = ctx
 		s.desc = desc
 		s.cc = cc
