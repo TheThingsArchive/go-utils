@@ -10,8 +10,24 @@ import (
 	"github.com/TheThingsNetwork/go-utils/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/peer"
 )
+
+// Settings for Interceptor
+type Settings struct {
+	RetryableCodes []codes.Code
+}
+
+// DefaultSettings for Interceptor
+var DefaultSettings = Settings{
+	RetryableCodes: []codes.Code{
+		codes.Canceled,
+		codes.Unknown,
+		codes.Aborted,
+		codes.Unavailable,
+	},
+}
 
 type restartingStream struct {
 	log log.Interface
@@ -22,6 +38,8 @@ type restartingStream struct {
 	method   string
 	streamer grpc.Streamer
 	opts     []grpc.CallOption
+
+	retryableCodes []codes.Code
 
 	done chan struct{}
 
@@ -77,7 +95,12 @@ func (s *restartingStream) RecvMsg(m interface{}) error {
 		return err
 	}
 
-	s.start()
+	for _, retryable := range s.retryableCodes {
+		if grpc.Code(err) == retryable {
+			s.start()
+			return err
+		}
+	}
 
 	return err
 }
@@ -96,30 +119,33 @@ func (s *restartingStream) CloseSend() error {
 // An io.EOF indicates the end of the stream
 //
 // To stop the reconnect behaviour, you have to cancel the context
-func Interceptor(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (stream grpc.ClientStream, err error) {
-	s := new(restartingStream)
-	s.ctx = ctx
-	s.desc = desc
-	s.cc = cc
-	s.method = method
-	s.streamer = streamer
-	s.opts = opts
-	s.done = make(chan struct{})
+func Interceptor(settings Settings) grpc.StreamClientInterceptor {
+	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (stream grpc.ClientStream, err error) {
+		s := new(restartingStream)
+		s.retryableCodes = settings.RetryableCodes
+		s.ctx = ctx
+		s.desc = desc
+		s.cc = cc
+		s.method = method
+		s.streamer = streamer
+		s.opts = opts
+		s.done = make(chan struct{})
 
-	s.log = log.Get().WithField("Method", method)
+		s.log = log.Get().WithField("Method", method)
 
-	go func() {
-		select {
-		case <-ctx.Done(): // canceled
-		case <-s.done: // eof
-		}
-		s.Lock()
-		defer s.Unlock()
-		s.closing = true
-	}()
+		go func() {
+			select {
+			case <-ctx.Done(): // canceled
+			case <-s.done: // eof
+			}
+			s.Lock()
+			defer s.Unlock()
+			s.closing = true
+		}()
 
-	err = s.start()
+		err = s.start()
 
-	stream = s
-	return
+		stream = s
+		return
+	}
 }

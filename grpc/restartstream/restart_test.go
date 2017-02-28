@@ -46,7 +46,9 @@ func TestReconnect(t *testing.T) {
 
 	addr := "localhost:" + port
 	breakStream := NewCancel()
-	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(Interceptor, breakStream.Interceptor)))
+	settings := DefaultSettings
+	settings.RetryableCodes = append(settings.RetryableCodes, codes.InvalidArgument)
+	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(Interceptor(settings), breakStream.Interceptor)))
 	if err != nil {
 		t.Fatalf("Dial(%q) = %v", addr, err)
 	}
@@ -114,8 +116,10 @@ func TestReconnect(t *testing.T) {
 		a.So(server.PushFoo.Foo, ShouldEqual, "and again")
 
 		if doCancel {
+			log.Get().Debug("[TEST] canceling")
 			cancel()
 		} else {
+			log.Get().Debug("[TEST] ending")
 			stream.CloseSend()
 		}
 
@@ -156,6 +160,7 @@ func TestReconnect(t *testing.T) {
 		time.Sleep(2 * sleepTime)
 
 		if doCancel {
+			log.Get().Debug("[TEST] canceling")
 			cancel()
 		} else {
 			wg.Wait()
@@ -215,8 +220,10 @@ func TestReconnect(t *testing.T) {
 		time.Sleep(2 * sleepTime)
 
 		if doCancel {
+			log.Get().Debug("[TEST] canceling")
 			cancel()
 		} else {
+			log.Get().Debug("[TEST] ending")
 			stream.CloseSend()
 		}
 
