@@ -4,6 +4,7 @@
 package restartstream
 
 import (
+	"errors"
 	"io"
 	"sync"
 	"time"
@@ -49,17 +50,15 @@ type restartingStream struct {
 	backoff        backoff.Config
 	retries        int
 
-	done chan struct{}
-
 	sync.RWMutex
 	grpc.ClientStream
-	closing bool
 }
 
 func (s *restartingStream) start() (err error) {
 	s.Lock()
 	defer s.Unlock()
 
+stream:
 	for {
 		s.log.Debug("Stream (re)starting")
 		s.ClientStream, err = s.streamer(s.ctx, s.desc, s.cc, s.method, s.opts...)
@@ -68,10 +67,16 @@ func (s *restartingStream) start() (err error) {
 			break
 		}
 		s.log.WithField("error", grpc.ErrorDesc(err)).Debug("Stream setup unsuccessful")
-		backoff := s.backoff.Backoff(s.retries)
-		s.log.WithField("Duration", backoff).Debug("Stream backing off")
-		time.Sleep(backoff)
-		s.retries++
+		for _, retryable := range s.retryableCodes {
+			if grpc.Code(err) == retryable {
+				backoff := s.backoff.Backoff(s.retries)
+				s.log.WithField("Duration", backoff).Debug("Stream backing off")
+				time.Sleep(backoff)
+				s.retries++
+				continue stream
+			}
+		}
+		return err
 	}
 	log := s.log
 	if peer, ok := peer.FromContext(s.ClientStream.Context()); ok {
@@ -82,10 +87,17 @@ func (s *restartingStream) start() (err error) {
 	return
 }
 
+// ErrStreamClosed is returned when trying to call SendMsg or RecvMsg on a closed stream
+var ErrStreamClosed = errors.New("grpc: stream closed")
+
 func (s *restartingStream) SendMsg(m interface{}) error {
 	s.RLock()
 	stream := s.ClientStream
 	s.RUnlock()
+	if stream == nil {
+		return ErrStreamClosed
+	}
+
 	return stream.SendMsg(m) // blocking
 }
 
@@ -93,6 +105,9 @@ func (s *restartingStream) RecvMsg(m interface{}) error {
 	s.RLock()
 	stream := s.ClientStream
 	s.RUnlock()
+	if stream == nil {
+		return ErrStreamClosed
+	}
 
 	err := stream.RecvMsg(m) // blocking
 	if err == nil {
@@ -101,34 +116,24 @@ func (s *restartingStream) RecvMsg(m interface{}) error {
 
 	stream.CloseSend()
 
-	s.RLock()
-	closing := s.closing
-	s.RUnlock()
-
-	if closing {
-		return err
+	if err := s.ctx.Err(); err != nil {
+		return err // context canceled
 	}
 
-	if s.desc.ServerStreams && err == io.EOF {
-		close(s.done)
-		return err
+	if err == io.EOF {
+		return err // eof
 	}
 
 	for _, retryable := range s.retryableCodes {
 		if grpc.Code(err) == retryable {
-			s.start()
+			if err := s.start(); err != nil {
+				return err
+			}
 			return s.RecvMsg(m)
 		}
 	}
 
 	return err
-}
-
-func (s *restartingStream) CloseSend() error {
-	if s.desc.ClientStreams {
-		close(s.done)
-	}
-	return s.ClientStream.CloseSend()
 }
 
 // Interceptor automatically restarts streams on non-expected errors
@@ -152,19 +157,7 @@ func Interceptor(settings Settings) grpc.StreamClientInterceptor {
 
 			retryableCodes: settings.RetryableCodes,
 			backoff:        settings.Backoff,
-
-			done: make(chan struct{}),
 		}
-
-		go func() {
-			select {
-			case <-ctx.Done(): // canceled
-			case <-s.done: // eof
-			}
-			s.Lock()
-			defer s.Unlock()
-			s.closing = true
-		}()
 
 		err = s.start()
 

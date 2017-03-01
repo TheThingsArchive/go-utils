@@ -5,7 +5,6 @@ package restartstream
 
 import (
 	"context"
-	"io"
 	"net"
 	"sync"
 	"testing"
@@ -48,6 +47,7 @@ func TestReconnect(t *testing.T) {
 	breakStream := NewCancel()
 	settings := DefaultSettings
 	settings.RetryableCodes = append(settings.RetryableCodes, codes.InvalidArgument)
+	settings.Backoff.BaseDelay = 10 * time.Millisecond
 	conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithStreamInterceptor(grpc_middleware.ChainStreamClient(Interceptor(settings), breakStream.Interceptor)))
 	if err != nil {
 		t.Fatalf("Dial(%q) = %v", addr, err)
@@ -62,6 +62,8 @@ func TestReconnect(t *testing.T) {
 		a.So(server.GetFoo.Foo, ShouldEqual, "ok")
 
 		testLogger.Print(t)
+
+		time.Sleep(2 * sleepTime)
 	}
 
 	var testPush = func(doCancel bool) {
@@ -74,16 +76,12 @@ func TestReconnect(t *testing.T) {
 			for {
 				bar := new(Bar)
 				err := stream.RecvMsg(bar)
-				if err == io.EOF || grpc.Code(err) == codes.Canceled {
+				if err != nil {
 					log.Get().WithField("Method", "Push").WithError(err).Debugf("[TEST] EOF")
 					done = true
 					return
 				}
-				if err == nil {
-					log.Get().WithField("Method", "Push").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
-				} else {
-					log.Get().WithField("Method", "Push").WithField("Bar", bar).WithError(err).Debugf("[TEST] Recv Err")
-				}
+				log.Get().WithField("Method", "Push").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
 			}
 		}()
 
@@ -123,7 +121,7 @@ func TestReconnect(t *testing.T) {
 			stream.CloseSend()
 		}
 
-		time.Sleep(sleepTime)
+		time.Sleep(2 * sleepTime)
 		a.So(done, ShouldBeTrue)
 
 		testLogger.Print(t)
@@ -144,15 +142,11 @@ func TestReconnect(t *testing.T) {
 		go func() {
 			for {
 				bar, err := stream.Recv()
-				if err == io.EOF || grpc.Code(err) == codes.Canceled {
+				if err != nil {
 					log.Get().WithField("Method", "Pull").WithError(err).Debugf("[TEST] EOF")
 					return
 				}
-				if err == nil {
-					log.Get().WithField("Method", "Pull").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
-				} else {
-					log.Get().WithField("Method", "Pull").WithField("Bar", bar).WithError(err).Debugf("[TEST] Recv Err")
-				}
+				log.Get().WithField("Method", "Pull").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
 				wg.Done()
 			}
 		}()
@@ -166,7 +160,7 @@ func TestReconnect(t *testing.T) {
 			wg.Wait()
 		}
 
-		time.Sleep(sleepTime)
+		time.Sleep(2 * sleepTime)
 
 		testLogger.Print(t)
 	}
@@ -187,15 +181,11 @@ func TestReconnect(t *testing.T) {
 		go func() {
 			for {
 				bar, err := stream.Recv()
-				if err == io.EOF || grpc.Code(err) == codes.Canceled {
+				if err != nil {
 					log.Get().WithField("Method", "Sync").WithError(err).Debugf("[TEST] EOF")
 					return
 				}
-				if err == nil {
-					log.Get().WithField("Method", "Sync").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
-				} else {
-					log.Get().WithField("Method", "Sync").WithField("Bar", bar).WithError(err).Debugf("[TEST] Recv Err")
-				}
+				log.Get().WithField("Method", "Sync").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
 			}
 		}()
 
@@ -227,12 +217,34 @@ func TestReconnect(t *testing.T) {
 			stream.CloseSend()
 		}
 
-		time.Sleep(sleepTime)
+		time.Sleep(2 * sleepTime)
 
 		testLogger.Print(t)
 	}
 
 	testSync(true)
 	testSync(false)
+
+	{
+		stream, err := cli.Sync(context.Background())
+		a.So(err, ShouldBeNil)
+		go func() {
+			for {
+				bar, err := stream.Recv()
+				if err != nil {
+					log.Get().WithField("Method", "Sync").WithError(err).Debugf("[TEST] EOF")
+					return
+				}
+				log.Get().WithField("Method", "Sync").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
+			}
+		}()
+
+		time.Sleep(10 * time.Millisecond)
+
+		conn.Close()
+
+		time.Sleep(2 * sleepTime)
+		testLogger.Print(t)
+	}
 
 }
