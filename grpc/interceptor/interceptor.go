@@ -87,13 +87,19 @@ func fieldsFromContext(ctx context.Context) log.Fields {
 		}
 	}
 
-	md, err := api.MetadataFromContext(ctx)
-	if err != nil {
-		return fields
-	}
+	md := api.MetadataFromContext(ctx)
 
 	if id, err := api.IDFromMetadata(md); err == nil {
 		fields["CallerID"] = id
+	}
+
+	if serviceName, serviceVersion, _, err := api.ServiceInfoFromMetadata(md); err == nil {
+		if serviceName != "" {
+			fields["ServiceName"] = serviceName
+		}
+		if serviceVersion != "" {
+			fields["ServiceVersion"] = serviceVersion
+		}
 	}
 
 	if _, err := api.KeyFromMetadata(md); err == nil {
