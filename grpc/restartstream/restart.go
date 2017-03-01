@@ -9,8 +9,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/TheThingsNetwork/go-utils/backoff"
 	"github.com/TheThingsNetwork/go-utils/log"
-	"github.com/TheThingsNetwork/ttn/utils/backoff"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
