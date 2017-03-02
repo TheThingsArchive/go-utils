@@ -5,6 +5,8 @@ package encoding
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"testing"
@@ -641,4 +643,56 @@ func TestToStringInterfaceMap(t *testing.T) {
 
 		})
 	}
+}
+
+func TestNonUniqueKeys(t *testing.T) {
+	a := s.New(t)
+
+	invalidStruct1 := struct {
+		Conflicting string         `test:"squashedField"`
+		Squashed    SquashedStruct `test:",squash"`
+	}{
+		Conflicting: "hello",
+		Squashed: SquashedStruct{
+			SquashedField: "there",
+		},
+	}
+
+	invalidStruct2 := struct {
+		Squashed    SquashedStruct `test:",squash"`
+		Conflicting string         `test:"squashedField"`
+	}{
+		Conflicting: "hello",
+		Squashed: SquashedStruct{
+			SquashedField: "there",
+		},
+	}
+
+	for _, sub := range []interface{}{invalidStruct1, invalidStruct2} {
+		var err error
+		catch := func() {
+			if r := recover(); r != nil {
+				var ok bool
+				err, ok = r.(error)
+				if !ok {
+					err = fmt.Errorf("pkg: %v", r)
+				}
+			}
+		}
+
+		expected := errors.New("field names not unique (squashedField)")
+
+		func() {
+			defer catch()
+			ToStringStringMap("test", sub)
+		}()
+		a.So(err, s.ShouldResemble, expected)
+
+		func() {
+			defer catch()
+			ToStringInterfaceMap("test", sub)
+		}()
+		a.So(err, s.ShouldResemble, expected)
+	}
+
 }
