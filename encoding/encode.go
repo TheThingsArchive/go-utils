@@ -13,6 +13,24 @@ import (
 	"github.com/fatih/structs"
 )
 
+type smap map[string]string
+
+func (m smap) Set(key string, value string) {
+	if _, ok := m[key]; ok {
+		panic(fmt.Errorf("field names not unique (%s)", key))
+	}
+	m[key] = value
+}
+
+type imap map[string]interface{}
+
+func (m imap) Set(key string, value interface{}) {
+	if _, ok := m[key]; ok {
+		panic(fmt.Errorf("field names not unique (%s)", key))
+	}
+	m[key] = value
+}
+
 func stringInSlice(search string, slice []string) bool {
 	for _, i := range slice {
 		if i == search {
@@ -49,7 +67,7 @@ type isEmptier interface {
 
 // ToStringStringMap encodes fields tagged with tagName in input into map[string]string. Optional argument properties specifies fields to encode.
 func ToStringStringMap(tagName string, input interface{}, properties ...string) (map[string]string, error) {
-	vmap := make(map[string]string)
+	vmap := smap(make(map[string]string))
 	s := structs.New(input)
 	s.TagName = tagName
 	if len(properties) == 0 {
@@ -66,13 +84,14 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 		}
 
 		fieldName, opts := parseTag(field.Tag(tagName))
-		if fieldName == "" || fieldName == "-" {
+		squash, omitempty, include := opts.Has("squash"), opts.Has("omitempty"), opts.Has("include")
+		if !squash && (fieldName == "" || fieldName == "-") {
 			continue
 		}
 
 		val := field.Value()
 
-		if opts.Has("omitempty") {
+		if omitempty {
 			if field.IsZero() {
 				continue
 			}
@@ -88,7 +107,9 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 		if kind == reflect.Ptr {
 			v := reflect.ValueOf(val)
 			if v.IsNil() {
-				vmap[fieldName] = ""
+				if fieldName != "" && fieldName != "-" {
+					vmap.Set(fieldName, "")
+				}
 				continue
 			}
 			elem := v.Elem()
@@ -96,7 +117,7 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			val = elem.Interface()
 		}
 
-		if opts.Has("include") && kind == reflect.Struct {
+		if (squash || include) && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
 				if strings.HasPrefix(prop, fieldName+".") {
@@ -107,17 +128,23 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			if err != nil {
 				return nil, err
 			}
+
+			var prefix string
+			if !squash {
+				prefix = fieldName + "."
+			}
+
 			for k, v := range m {
-				vmap[fieldName+"."+k] = v
+				vmap.Set(prefix+k, v)
 			}
 			continue
 		}
 
 		if v, ok := val.(string); ok {
-			vmap[fieldName] = v
+			vmap.Set(fieldName, v)
 			continue
 		} else if v, ok := val.(*string); ok {
-			vmap[fieldName] = *v
+			vmap.Set(fieldName, *v)
 			continue
 		}
 
@@ -127,7 +154,7 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 				if err != nil {
 					return nil, err
 				}
-				vmap[fieldName] = string(txt)
+				vmap.Set(fieldName, string(txt))
 				continue
 			}
 			if m, ok := val.(json.Marshaler); ok {
@@ -135,32 +162,34 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 				if err != nil {
 					return nil, err
 				}
-				vmap[fieldName] = string(txt)
+				vmap.Set(fieldName, string(txt))
 				continue
 			}
 		}
 
 		if kind == reflect.String {
-			vmap[fieldName] = fmt.Sprint(val)
+			vmap.Set(fieldName, fmt.Sprint(val))
 			continue
 		}
 
 		if txt, err := json.Marshal(val); err == nil {
-			vmap[fieldName] = string(txt)
-			if vmap[fieldName] == `""` || vmap[fieldName] == "null" {
-				vmap[fieldName] = ""
+			txt := string(txt)
+			if txt == `""` || txt == "null" {
+				vmap.Set(fieldName, "")
+			} else {
+				vmap.Set(fieldName, string(txt))
 			}
 			continue
 		}
 
-		vmap[fieldName] = fmt.Sprintf("%v", val)
+		vmap.Set(fieldName, fmt.Sprintf("%v", val))
 	}
 	return vmap, nil
 }
 
 // ToStringInterfaceMap encodes fields tagged with tagName in input into map[string]interface{}. Optional argument properties specifies fields to encode.
 func ToStringInterfaceMap(tagName string, input interface{}, properties ...string) (map[string]interface{}, error) {
-	vmap := make(map[string]interface{})
+	vmap := imap(make(map[string]interface{}))
 	s := structs.New(input)
 	s.TagName = tagName
 	if len(properties) == 0 {
@@ -177,13 +206,14 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 		}
 
 		fieldName, opts := parseTag(field.Tag(tagName))
-		if fieldName == "" || fieldName == "-" {
+		squash, omitempty, include := opts.Has("squash"), opts.Has("omitempty"), opts.Has("include")
+		if !squash && (fieldName == "" || fieldName == "-") {
 			continue
 		}
 
 		val := field.Value()
 
-		if opts.Has("omitempty") {
+		if omitempty {
 			if field.IsZero() {
 				continue
 			}
@@ -199,7 +229,9 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 		if kind == reflect.Ptr {
 			v := reflect.ValueOf(val)
 			if v.IsNil() {
-				vmap[fieldName] = nil
+				if fieldName != "" && fieldName != "-" {
+					vmap.Set(fieldName, nil)
+				}
 				continue
 			}
 			elem := v.Elem()
@@ -207,7 +239,7 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 			val = elem.Interface()
 		}
 
-		if opts.Has("include") && kind == reflect.Struct {
+		if (squash || include) && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
 				if strings.HasPrefix(prop, fieldName+".") {
@@ -218,13 +250,19 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 			if err != nil {
 				return nil, err
 			}
+
+			var prefix string
+			if !squash {
+				prefix = fieldName + "."
+			}
+
 			for k, v := range m {
-				vmap[fieldName+"."+k] = v
+				vmap.Set(prefix+k, v)
 			}
 			continue
 		}
 
-		vmap[fieldName] = val
+		vmap.Set(fieldName, val)
 	}
 	return vmap, nil
 }

@@ -5,6 +5,8 @@ package encoding
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"math"
 	"strconv"
 	"testing"
@@ -44,6 +46,11 @@ var (
 	stringStringMapVar = map[string]string{"te": "st"}
 
 	inclStructVar = inclStruct{Int: intVar, SubInclStruct: subInclStruct{Int: intVar}}
+
+	SquashedFieldVar  = "squashed field"
+	squashedStructVar = SquashedStruct{
+		SquashedField: SquashedFieldVar,
+	}
 )
 
 var (
@@ -112,6 +119,8 @@ const (
 
 	EmbStructTag    = "embStruct"
 	EmbInterfaceTag = "embInterface"
+
+	SquashedField = "squashedField"
 )
 
 type inclStruct struct {
@@ -128,6 +137,10 @@ type EmbStruct struct {
 }
 type EmbInterface interface {
 	Test()
+}
+
+type SquashedStruct struct {
+	SquashedField string `test:"squashedField"`
 }
 type testStruct struct {
 	Int     int     `test:"int"`
@@ -172,6 +185,8 @@ type testStruct struct {
 
 	EmbStruct    `test:"embStruct,include"`
 	EmbInterface `test:"embInterface,include"`
+
+	SquashedStruct `test:",squash"`
 
 	InclStruct         inclStruct  `test:"inclStruct,include"`
 	InclStructEmpty    inclStruct  `test:"inclStructEmpty,include,omitempty"`
@@ -245,6 +260,8 @@ func TestFromStringStringMap(t *testing.T) {
 
 				InclStructEmb + "." + Int:                       strconv.Itoa(intVar),
 				InclStructEmb + "." + SubInclStruct + "." + Int: strconv.Itoa(intVar),
+
+				SquashedField: SquashedFieldVar,
 			}
 
 			ret, err := FromStringStringMap(testTag, arg, m)
@@ -329,6 +346,8 @@ func TestFromStringStringMap(t *testing.T) {
 
 			a.So(v.EmbStruct.Int, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[EmbStructTag+"."+Int], 10, 0); return int(val) }())
 
+			a.So(v.SquashedStruct.SquashedField, s.ShouldEqual, SquashedFieldVar)
+
 			a.So(v.InclStruct.Int, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[InclStruct+"."+Int], 10, 0); return int(val) }())
 			a.So(v.InclStruct.SubInclStruct.Int, s.ShouldEqual, func() int {
 				val, _ := strconv.ParseInt(m[InclStruct+"."+SubInclStruct+"."+Int], 10, 0)
@@ -395,6 +414,8 @@ var testStructVar = testStruct{
 	InclStructPtr: &inclStructVar,
 
 	inclStruct: inclStructVar,
+
+	SquashedStruct: squashedStructVar,
 }
 
 func TestToStringStringMap(t *testing.T) {
@@ -457,6 +478,8 @@ func TestToStringStringMap(t *testing.T) {
 
 			a.So(enc[EmbStructTag+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.EmbStruct.Int), 10))
 
+			a.So(enc[SquashedField], s.ShouldEqual, SquashedFieldVar)
+
 			a.So(enc[InclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStruct.Int), 10))
 			a.So(enc[InclStruct+"."+SubInclStruct+".int"], s.ShouldEqual, strconv.FormatInt(int64(v.InclStruct.SubInclStruct.Int), 10))
 
@@ -504,7 +527,6 @@ func TestToStringStringMap(t *testing.T) {
 				a.So(enc[BoolPtr], s.ShouldEqual, "")
 				a.So(enc[StringPtr], s.ShouldEqual, "")
 			}
-
 		})
 	}
 }
@@ -569,6 +591,8 @@ func TestToStringInterfaceMap(t *testing.T) {
 
 			a.So(enc[EmbStructTag+".int"], s.ShouldEqual, v.EmbStruct.Int)
 
+			a.So(enc[SquashedField], s.ShouldEqual, SquashedFieldVar)
+
 			a.So(enc[InclStruct+".int"], s.ShouldEqual, v.InclStruct.Int)
 			a.So(enc[InclStruct+"."+SubInclStruct+".int"], s.ShouldEqual, v.InclStruct.SubInclStruct.Int)
 
@@ -619,4 +643,56 @@ func TestToStringInterfaceMap(t *testing.T) {
 
 		})
 	}
+}
+
+func TestNonUniqueKeys(t *testing.T) {
+	a := s.New(t)
+
+	invalidStruct1 := struct {
+		Conflicting string         `test:"squashedField"`
+		Squashed    SquashedStruct `test:",squash"`
+	}{
+		Conflicting: "hello",
+		Squashed: SquashedStruct{
+			SquashedField: "there",
+		},
+	}
+
+	invalidStruct2 := struct {
+		Squashed    SquashedStruct `test:",squash"`
+		Conflicting string         `test:"squashedField"`
+	}{
+		Conflicting: "hello",
+		Squashed: SquashedStruct{
+			SquashedField: "there",
+		},
+	}
+
+	for _, sub := range []interface{}{invalidStruct1, invalidStruct2} {
+		var err error
+		catch := func() {
+			if r := recover(); r != nil {
+				var ok bool
+				err, ok = r.(error)
+				if !ok {
+					err = fmt.Errorf("pkg: %v", r)
+				}
+			}
+		}
+
+		expected := errors.New("field names not unique (squashedField)")
+
+		func() {
+			defer catch()
+			ToStringStringMap("test", sub)
+		}()
+		a.So(err, s.ShouldResemble, expected)
+
+		func() {
+			defer catch()
+			ToStringInterfaceMap("test", sub)
+		}()
+		a.So(err, s.ShouldResemble, expected)
+	}
+
 }
