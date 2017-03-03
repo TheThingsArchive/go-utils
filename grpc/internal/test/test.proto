@@ -1,0 +1,21 @@
+// Copyright © 2017 The Things Network
+// Use of this source code is governed by the MIT license that can be found in the LICENSE file.
+
+syntax = "proto3";
+
+package test;
+
+message Foo {
+  string foo = 1;
+}
+
+message Bar {
+  string bar = 1;
+}
+
+service Test {
+  rpc Get(Foo) returns (Bar);
+  rpc Push(stream Foo) returns (Bar);
+  rpc Pull(Foo) returns (stream Bar);
+  rpc Sync(stream Foo) returns (stream Bar);
+}
