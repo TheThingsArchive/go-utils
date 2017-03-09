@@ -46,6 +46,8 @@ type restartingStream struct {
 	streamer grpc.Streamer
 	opts     []grpc.CallOption
 
+	argument interface{}
+
 	retryableCodes []codes.Code
 	backoff        backoff.Config
 	retries        int
@@ -89,6 +91,11 @@ stream:
 	}
 	log.Debug("Stream started")
 
+	if !s.desc.ClientStreams && s.argument != nil {
+		s.ClientStream.SendMsg(s.argument)
+		s.ClientStream.CloseSend()
+	}
+
 	return
 }
 
@@ -102,7 +109,9 @@ func (s *restartingStream) SendMsg(m interface{}) error {
 	if stream == nil {
 		return ErrStreamClosed
 	}
-
+	if !s.desc.ClientStreams {
+		s.argument = m
+	}
 	return stream.SendMsg(m) // blocking
 }
 

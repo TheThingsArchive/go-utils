@@ -6,7 +6,6 @@ package restartstream
 import (
 	"context"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -136,8 +135,7 @@ func TestReconnect(t *testing.T) {
 		stream, err := cli.Pull(ctx, &Foo{Foo: foo})
 		a.So(err, ShouldBeNil)
 
-		var wg sync.WaitGroup
-		wg.Add(5)
+		var recv int
 
 		go func() {
 			for {
@@ -147,7 +145,7 @@ func TestReconnect(t *testing.T) {
 					return
 				}
 				log.Get().WithField("Method", "Pull").WithField("Bar", bar).Debugf("[TEST] Recv Ok")
-				wg.Done()
+				recv++
 			}
 		}()
 
@@ -157,7 +155,8 @@ func TestReconnect(t *testing.T) {
 			log.Get().Debug("[TEST] canceling")
 			cancel()
 		} else {
-			wg.Wait()
+			time.Sleep(2 * sleepTime)
+			a.So(recv, ShouldEqual, 5)
 		}
 
 		time.Sleep(2 * sleepTime)
