@@ -60,6 +60,11 @@ func (s *restartingStream) start() (err error) {
 
 stream:
 	for {
+		if s.retries >= 0 {
+			backoff := s.backoff.Backoff(s.retries)
+			s.log.WithField("Duration", backoff).Debug("Stream backing off")
+			time.Sleep(backoff)
+		}
 		s.log.Debug("Stream (re)starting")
 		s.ClientStream, err = s.streamer(s.ctx, s.desc, s.cc, s.method, s.opts...)
 		if err == nil {
@@ -157,6 +162,7 @@ func Interceptor(settings Settings) grpc.StreamClientInterceptor {
 
 			retryableCodes: settings.RetryableCodes,
 			backoff:        settings.Backoff,
+			retries:        -1,
 		}
 
 		err = s.start()
