@@ -112,7 +112,23 @@ func (s *restartingStream) SendMsg(m interface{}) error {
 	if !s.desc.ClientStreams {
 		s.argument = m
 	}
-	return stream.SendMsg(m) // blocking
+
+	err := stream.SendMsg(m) // blocking
+	if err == nil {
+		return nil
+	}
+
+	if err := s.ctx.Err(); err != nil {
+		return err // context canceled
+	}
+
+	for _, retryable := range s.retryableCodes {
+		if grpc.Code(err) == retryable {
+			return s.SendMsg(m)
+		}
+	}
+
+	return err
 }
 
 func (s *restartingStream) RecvMsg(m interface{}) error {
