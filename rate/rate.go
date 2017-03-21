@@ -174,7 +174,12 @@ type limiter struct {
 
 func (l *limiter) Limit() (bool, error) {
 	now := time.Now()
-	l.Add(now, 1)
 	events, err := l.Get(now, l.duration)
-	return events > l.limit, err
+	if err != nil {
+		return true, err
+	}
+	if events >= l.limit {
+		return true, nil
+	}
+	return false, l.Add(now, 1)
 }
