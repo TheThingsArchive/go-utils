@@ -2,6 +2,11 @@
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
 // Package rate implements rate counting and rate limiting.
+//
+// The implementation is based on a "circular" counter that is split into a number of "buckets". The "timestamp"
+// determines the bucket to be used for storing the event counter. This allows us to create multiple Limiters that use
+// the same underlying Counter. It also makes it easier to scale and run in a clustered setup, storing the counter
+// buckets in Redis.
 package rate
 
 import (
