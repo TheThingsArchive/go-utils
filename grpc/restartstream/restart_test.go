@@ -104,7 +104,10 @@ func TestReconnect(t *testing.T) {
 
 		// break the stream
 		breakStream.Cancel()
+		stream.Send(&Foo{Foo: "ok"})
 		time.Sleep(sleepTime)
+		a.So(server.PushFoo, ShouldNotBeNil)
+		a.So(server.PushFoo.Foo, ShouldEqual, "ok")
 
 		err = stream.Send(&Foo{Foo: "and again"})
 		a.So(err, ShouldBeNil)

@@ -103,67 +103,81 @@ stream:
 var ErrStreamClosed = errors.New("grpc: stream closed")
 
 func (s *restartingStream) SendMsg(m interface{}) error {
-	s.RLock()
-	stream := s.ClientStream
-	s.RUnlock()
-	if stream == nil {
-		return ErrStreamClosed
-	}
-	if !s.desc.ClientStreams {
-		s.argument = m
-	}
+	var retries int
+send:
+	for {
+		s.RLock()
+		stream := s.ClientStream
+		s.RUnlock()
+		if stream == nil {
+			return ErrStreamClosed
+		}
+		if !s.desc.ClientStreams {
+			s.argument = m
+		}
 
-	err := stream.SendMsg(m) // blocking
-	if err == nil {
-		return nil
-	}
+		err := stream.SendMsg(m) // blocking
+		if err == nil {
+			return nil
+		}
 
-	if err := s.ctx.Err(); err != nil {
-		return err // context canceled
-	}
+		stream.CloseSend()
 
-	for _, retryable := range s.retryableCodes {
-		if grpc.Code(err) == retryable {
-			return s.SendMsg(m)
+		if err := s.ctx.Err(); err != nil {
+			return err // context canceled
+		}
+
+		for _, retryable := range s.retryableCodes {
+			if grpc.Code(err) == retryable {
+				backoff := s.backoff.Backoff(retries)
+				s.log.WithField("error", grpc.ErrorDesc(err)).WithField("Duration", backoff).Debug("SendMsg backing off")
+				time.Sleep(backoff)
+				retries++
+				continue send
+			}
 		}
 	}
-
-	return err
 }
 
-func (s *restartingStream) RecvMsg(m interface{}) error {
-	s.RLock()
-	stream := s.ClientStream
-	s.RUnlock()
-	if stream == nil {
-		return ErrStreamClosed
-	}
+func (s *restartingStream) RecvMsg(m interface{}) (err error) {
+	var retries int
+recv:
+	for {
+		s.RLock()
+		stream := s.ClientStream
+		s.RUnlock()
+		if stream == nil {
+			return ErrStreamClosed
+		}
 
-	err := stream.RecvMsg(m) // blocking
-	if err == nil {
-		return nil
-	}
+		err := stream.RecvMsg(m) // blocking
+		if err == nil {
+			return nil
+		}
 
-	stream.CloseSend()
+		stream.CloseSend()
 
-	if err := s.ctx.Err(); err != nil {
-		return err // context canceled
-	}
+		if err := s.ctx.Err(); err != nil {
+			return err // context canceled
+		}
 
-	if err == io.EOF {
-		return err // eof
-	}
+		if err == io.EOF {
+			return err // eof
+		}
 
-	for _, retryable := range s.retryableCodes {
-		if grpc.Code(err) == retryable {
-			if err := s.start(); err != nil {
-				return err
+		for _, retryable := range s.retryableCodes {
+			if grpc.Code(err) == retryable {
+				if err := s.start(); err != nil {
+					return err
+				}
+				backoff := s.backoff.Backoff(retries)
+				s.log.WithField("error", grpc.ErrorDesc(err)).WithField("Duration", backoff).Debug("RecvMsg backing off")
+				time.Sleep(backoff)
+				retries++
+				continue recv
 			}
-			return s.RecvMsg(m)
 		}
 	}
-
-	return err
 }
 
 // Interceptor automatically restarts streams on non-expected errors
