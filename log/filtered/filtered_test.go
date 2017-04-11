@@ -100,28 +100,27 @@ func TestFilterSensitive(t *testing.T) {
 
 	// should elide passwords
 	{
-		wrapped.WithField("password", "secret")
-
-		fields := wrapped.Interface.(*FieldsLogger).Fields
+		w := wrapped.WithField("password", "secret")
+		fields := w.(*Filtered).Interface.(*FieldsLogger).Fields
 		a.So(fields, ShouldContainKey, "password")
 		a.So(fields["password"], ShouldEqual, defaultElided)
 	}
 
 	// should not elide other stuff
 	{
-		wrapped.WithField("foo", "bar")
-		fields := wrapped.Interface.(*FieldsLogger).Fields
+		w := wrapped.WithField("foo", "bar")
+		fields := w.(*Filtered).Interface.(*FieldsLogger).Fields
 		a.So(fields, ShouldContainKey, "foo")
 		a.So(fields["foo"], ShouldEqual, "bar")
 	}
 
 	// should work the same with more fields
 	{
-		wrapped.WithFields(log.Fields{
+		w := wrapped.WithFields(log.Fields{
 			"bar":   "baz",
 			"token": "secret",
 		})
-		fields := wrapped.Interface.(*FieldsLogger).Fields
+		fields := w.(*Filtered).Interface.(*FieldsLogger).Fields
 		a.So(fields, ShouldContainKey, "bar")
 		a.So(fields["bar"], ShouldEqual, "baz")
 
@@ -137,12 +136,12 @@ func TestFilterQuery(t *testing.T) {
 		Interface: &noopLogger{},
 	}, DefaultQueryFilter)
 
-	wrapped.WithField("query", map[string][]string{
+	w := wrapped.WithField("query", map[string][]string{
 		"password": []string{"secret"},
 		"foo":      []string{"bar"},
 	})
 
-	fields := wrapped.Interface.(*FieldsLogger).Fields
+	fields := w.(*Filtered).Interface.(*FieldsLogger).Fields
 
 	a.So(fields, ShouldContainKey, "query")
 
@@ -153,4 +152,44 @@ func TestFilterQuery(t *testing.T) {
 
 	a.So(query, ShouldContainKey, "foo")
 	a.So(query["foo"], ShouldResemble, []interface{}{"bar"})
+}
+
+func TestFilteredFields(t *testing.T) {
+	a := New(t)
+
+	wrapped := Wrap(&FieldsLogger{
+		Interface: &noopLogger{},
+	}, DefaultQueryFilter)
+
+	fst := wrapped.WithField("foo", "bar")
+	snd := wrapped.WithField("quu", "qux")
+
+	fstFields := fst.(*Filtered).Interface.(*FieldsLogger).Fields
+	sndFields := snd.(*Filtered).Interface.(*FieldsLogger).Fields
+
+	a.So(fstFields, ShouldContainKey, "foo")
+	a.So(fstFields, ShouldNotContainKey, "quu")
+
+	a.So(sndFields, ShouldNotContainKey, "foo")
+	a.So(sndFields, ShouldContainKey, "quu")
+
+	fstbis := fst.WithFields(log.Fields{
+		"foobis": "barbis",
+	})
+	sndbis := snd.WithFields(log.Fields{
+		"quubis": "quxbis",
+	})
+
+	fstbisFields := fstbis.(*Filtered).Interface.(*FieldsLogger).Fields
+	sndbisFields := sndbis.(*Filtered).Interface.(*FieldsLogger).Fields
+
+	a.So(fstbisFields, ShouldContainKey, "foo")
+	a.So(fstbisFields, ShouldNotContainKey, "quu")
+	a.So(fstbisFields, ShouldContainKey, "foobis")
+	a.So(fstbisFields, ShouldNotContainKey, "quubis")
+
+	a.So(sndbisFields, ShouldNotContainKey, "foo")
+	a.So(sndbisFields, ShouldContainKey, "quu")
+	a.So(sndbisFields, ShouldNotContainKey, "foobix")
+	a.So(sndbisFields, ShouldContainKey, "quubis")
 }

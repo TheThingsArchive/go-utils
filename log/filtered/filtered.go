@@ -52,8 +52,10 @@ func (f *Filtered) WithField(k string, v interface{}) log.Interface {
 		val = filter.Filter(k, val)
 	}
 
-	f.Interface = f.Interface.WithField(k, val)
-	return f
+	return &Filtered{
+		Interface: f.Interface.WithField(k, val),
+		filters:   f.filters,
+	}
 }
 
 // WithFields filters the fields and passes them on to the wrapped loggers WithFields
@@ -71,8 +73,10 @@ func (f *Filtered) WithFields(fields log.Fields) log.Interface {
 		res[k] = val
 	}
 
-	f.Interface = f.Interface.WithFields(res)
-	return f
+	return &Filtered{
+		Interface: f.Interface.WithFields(res),
+		filters:   f.filters,
+	}
 }
 
 var (
