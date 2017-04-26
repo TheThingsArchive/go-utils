@@ -10,6 +10,7 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func decodeToType(typ reflect.Kind, value string) interface{} {
@@ -174,6 +175,10 @@ func FromStringStringMap(tagName string, base interface{}, input map[string]stri
 			}
 		default:
 			iface = decodeToType(fieldKind, inputStr)
+		}
+
+		if v, ok := iface.(time.Time); ok {
+			iface = v.UTC()
 		}
 
 		fieldVal := reflect.ValueOf(iface).Convert(fieldType)

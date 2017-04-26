@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/fatih/structs"
 )
@@ -115,6 +116,24 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 			elem := v.Elem()
 			kind = elem.Kind()
 			val = elem.Interface()
+		}
+
+		if z, ok := val.(isZeroer); ok && z.IsZero() {
+			vmap.Set(fieldName, "")
+			continue
+		}
+
+		if z, ok := val.(isEmptier); ok && z.IsEmpty() {
+			vmap.Set(fieldName, "")
+			continue
+		}
+
+		if z, ok := val.(time.Time); ok {
+			if z.Unix() == 0 {
+				vmap.Set(fieldName, "")
+				continue
+			}
+			val = z.UTC()
 		}
 
 		if (squash || include) && kind == reflect.Struct {

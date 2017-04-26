@@ -10,6 +10,7 @@ import (
 	"math"
 	"strconv"
 	"testing"
+	"time"
 
 	s "github.com/smartystreets/assertions"
 )
@@ -35,6 +36,8 @@ var (
 	boolVar    bool    = true
 	stringVar  string  = "test"
 
+	timeVar time.Time = time.Date(2017, 01, 02, 03, 04, 05, 06, time.UTC)
+
 	intSliceVar    = []int{4, 2}
 	boolSliceVar   = []bool{true, false}
 	stringSliceVar = []string{"te", "st"}
@@ -54,6 +57,9 @@ var (
 )
 
 var (
+	timeVarString      = "2017-01-02T03:04:05.000000006Z"
+	localTimeVarString = "2017-01-02T05:04:05.000000006+02:00"
+
 	intSliceVarString    = marshalToString(intSliceVar)
 	boolSliceVarString   = marshalToString(boolSliceVar)
 	stringSliceVarString = marshalToString(stringSliceVar)
@@ -82,6 +88,7 @@ const (
 	Float64 = "float64"
 	String  = "string"
 	Bool    = "bool"
+	Time    = "time"
 
 	IntPtr     = "intPtr"
 	Int8Ptr    = "int8Ptr"
@@ -97,6 +104,7 @@ const (
 	Float64Ptr = "float64Ptr"
 	StringPtr  = "stringPtr"
 	BoolPtr    = "boolPtr"
+	TimePtr    = "timePtr"
 
 	IntSlice    = "intSlice"
 	BoolSlice   = "boolSlice"
@@ -143,35 +151,37 @@ type SquashedStruct struct {
 	SquashedField string `test:"squashedField"`
 }
 type testStruct struct {
-	Int     int     `test:"int"`
-	Int8    int8    `test:"int8"`
-	Int16   int16   `test:"int16"`
-	Int32   int32   `test:"int32"`
-	Int64   int64   `test:"int64"`
-	Uint    uint    `test:"uint"`
-	Uint8   uint8   `test:"uint8"`
-	Uint16  uint16  `test:"uint16"`
-	Uint32  uint32  `test:"uint32"`
-	Uint64  uint64  `test:"uint64"`
-	Float32 float32 `test:"float32"`
-	Float64 float64 `test:"float64"`
-	String  string  `test:"string"`
-	Bool    bool    `test:"bool"`
+	Int     int       `test:"int"`
+	Int8    int8      `test:"int8"`
+	Int16   int16     `test:"int16"`
+	Int32   int32     `test:"int32"`
+	Int64   int64     `test:"int64"`
+	Uint    uint      `test:"uint"`
+	Uint8   uint8     `test:"uint8"`
+	Uint16  uint16    `test:"uint16"`
+	Uint32  uint32    `test:"uint32"`
+	Uint64  uint64    `test:"uint64"`
+	Float32 float32   `test:"float32"`
+	Float64 float64   `test:"float64"`
+	String  string    `test:"string"`
+	Bool    bool      `test:"bool"`
+	Time    time.Time `test:"time"`
 
-	IntPtr     *int     `test:"intPtr"`
-	Int8Ptr    *int8    `test:"int8Ptr"`
-	Int16Ptr   *int16   `test:"int16Ptr"`
-	Int32Ptr   *int32   `test:"int32Ptr"`
-	Int64Ptr   *int64   `test:"int64Ptr"`
-	UintPtr    *uint    `test:"uintPtr"`
-	Uint8Ptr   *uint8   `test:"uint8Ptr"`
-	Uint16Ptr  *uint16  `test:"uint16Ptr"`
-	Uint32Ptr  *uint32  `test:"uint32Ptr"`
-	Uint64Ptr  *uint64  `test:"uint64Ptr"`
-	Float32Ptr *float32 `test:"float32Ptr"`
-	Float64Ptr *float64 `test:"float64Ptr"`
-	StringPtr  *string  `test:"stringPtr"`
-	BoolPtr    *bool    `test:"boolPtr"`
+	IntPtr     *int       `test:"intPtr"`
+	Int8Ptr    *int8      `test:"int8Ptr"`
+	Int16Ptr   *int16     `test:"int16Ptr"`
+	Int32Ptr   *int32     `test:"int32Ptr"`
+	Int64Ptr   *int64     `test:"int64Ptr"`
+	UintPtr    *uint      `test:"uintPtr"`
+	Uint8Ptr   *uint8     `test:"uint8Ptr"`
+	Uint16Ptr  *uint16    `test:"uint16Ptr"`
+	Uint32Ptr  *uint32    `test:"uint32Ptr"`
+	Uint64Ptr  *uint64    `test:"uint64Ptr"`
+	Float32Ptr *float32   `test:"float32Ptr"`
+	Float64Ptr *float64   `test:"float64Ptr"`
+	StringPtr  *string    `test:"stringPtr"`
+	BoolPtr    *bool      `test:"boolPtr"`
+	TimePtr    *time.Time `test:"timePtr"`
 
 	IntSlice    []int    `test:"intSlice"`
 	BoolSlice   []bool   `test:"boolSlice"`
@@ -224,6 +234,7 @@ func TestFromStringStringMap(t *testing.T) {
 				Float64: strconv.FormatFloat(float64(float64Var), 'e', 16, 64),
 				String:  stringVar,
 				Bool:    strconv.FormatBool(boolVar),
+				Time:    localTimeVarString,
 
 				IntPtr:     strconv.Itoa(intVar),
 				Int8Ptr:    strconv.FormatInt(int64(int8Var), 10),
@@ -239,6 +250,7 @@ func TestFromStringStringMap(t *testing.T) {
 				Float64Ptr: strconv.FormatFloat(float64(float64Var), 'e', 16, 64),
 				StringPtr:  stringVar,
 				BoolPtr:    strconv.FormatBool(boolVar),
+				TimePtr:    timeVarString,
 
 				IntSlice:    intSliceVarString,
 				BoolSlice:   boolSliceVarString,
@@ -290,6 +302,7 @@ func TestFromStringStringMap(t *testing.T) {
 			a.So(v.Float64, s.ShouldEqual, func() float64 { val, _ := strconv.ParseFloat(m[Float64], 64); return float64(val) }())
 			a.So(v.Bool, s.ShouldEqual, func() bool { val, _ := strconv.ParseBool(m[Bool]); return bool(val) }())
 			a.So(v.String, s.ShouldEqual, m[String])
+			a.So(v.Time, s.ShouldResemble, timeVar)
 
 			if a.So(v.IntPtr, s.ShouldNotBeNil) {
 				a.So(*v.IntPtr, s.ShouldEqual, func() int { val, _ := strconv.ParseInt(m[Int], 10, 0); return int(val) }())
@@ -332,6 +345,9 @@ func TestFromStringStringMap(t *testing.T) {
 			}
 			if a.So(v.StringPtr, s.ShouldNotBeNil) {
 				a.So(*v.StringPtr, s.ShouldEqual, m[String])
+			}
+			if a.So(v.TimePtr, s.ShouldNotBeNil) {
+				a.So(*v.TimePtr, s.ShouldResemble, timeVar)
 			}
 
 			a.So(v.IntSlice, s.ShouldResemble, intSliceVar)
@@ -384,6 +400,7 @@ var testStructVar = testStruct{
 	Float64: float64Var,
 	Bool:    boolVar,
 	String:  stringVar,
+	Time:    timeVar,
 
 	IntPtr:     &intVar,
 	Int8Ptr:    &int8Var,
@@ -399,6 +416,7 @@ var testStructVar = testStruct{
 	Float64Ptr: &float64Var,
 	BoolPtr:    &boolVar,
 	StringPtr:  &stringVar,
+	TimePtr:    &timeVar,
 
 	IntSlice:    intSliceVar,
 	BoolSlice:   boolSliceVar,
@@ -450,6 +468,7 @@ func TestToStringStringMap(t *testing.T) {
 			a.So(enc[Float64], s.ShouldEqual, strconv.FormatFloat(float64(v.Float64), 'e', 16, 64))
 			a.So(enc[Bool], s.ShouldEqual, strconv.FormatBool(v.Bool))
 			a.So(enc[String], s.ShouldEqual, v.String)
+			a.So(enc[Time], s.ShouldEqual, timeVarString)
 
 			a.So(enc[IntPtr], s.ShouldEqual, strconv.FormatInt(int64(v.Int), 10))
 			a.So(enc[Int8Ptr], s.ShouldEqual, strconv.FormatInt(int64(v.Int8), 10))
@@ -465,6 +484,7 @@ func TestToStringStringMap(t *testing.T) {
 			a.So(enc[Float64Ptr], s.ShouldEqual, strconv.FormatFloat(float64(v.Float64), 'e', 16, 64))
 			a.So(enc[BoolPtr], s.ShouldEqual, strconv.FormatBool(v.Bool))
 			a.So(enc[StringPtr], s.ShouldEqual, v.String)
+			a.So(enc[TimePtr], s.ShouldEqual, timeVarString)
 
 			a.So(enc[IntSlice], s.ShouldEqual, marshalToString(v.IntSlice))
 			a.So(enc[BoolSlice], s.ShouldEqual, marshalToString(v.BoolSlice))
@@ -508,6 +528,7 @@ func TestToStringStringMap(t *testing.T) {
 				arg.Float64Ptr = nil
 				arg.BoolPtr = nil
 				arg.StringPtr = nil
+				arg.TimePtr = nil
 
 				enc, err := ToStringStringMap(testTag, arg)
 				a.So(err, s.ShouldBeNil)
@@ -526,6 +547,17 @@ func TestToStringStringMap(t *testing.T) {
 				a.So(enc[Float64Ptr], s.ShouldEqual, "")
 				a.So(enc[BoolPtr], s.ShouldEqual, "")
 				a.So(enc[StringPtr], s.ShouldEqual, "")
+				a.So(enc[TimePtr], s.ShouldEqual, "")
+
+				arg.Time = time.Time{}
+				enc, err = ToStringStringMap(testTag, arg)
+				a.So(err, s.ShouldBeNil)
+				a.So(enc[Time], s.ShouldEqual, "")
+
+				arg.Time = time.Unix(0, 0)
+				enc, err = ToStringStringMap(testTag, arg)
+				a.So(err, s.ShouldBeNil)
+				a.So(enc[Time], s.ShouldEqual, "")
 			}
 		})
 	}
@@ -563,6 +595,7 @@ func TestToStringInterfaceMap(t *testing.T) {
 			a.So(enc[Float64], s.ShouldEqual, v.Float64)
 			a.So(enc[Bool], s.ShouldEqual, v.Bool)
 			a.So(enc[String], s.ShouldEqual, v.String)
+			a.So(enc[Time], s.ShouldResemble, v.Time)
 
 			a.So(enc[IntPtr], s.ShouldEqual, *v.IntPtr)
 			a.So(enc[Int8Ptr], s.ShouldEqual, *v.Int8Ptr)
@@ -578,6 +611,7 @@ func TestToStringInterfaceMap(t *testing.T) {
 			a.So(enc[Float64Ptr], s.ShouldEqual, *v.Float64Ptr)
 			a.So(enc[BoolPtr], s.ShouldEqual, *v.BoolPtr)
 			a.So(enc[StringPtr], s.ShouldEqual, *v.StringPtr)
+			a.So(enc[TimePtr], s.ShouldResemble, *v.TimePtr)
 
 			a.So(enc[IntSlice], s.ShouldResemble, v.IntSlice)
 			a.So(enc[BoolSlice], s.ShouldResemble, v.BoolSlice)
