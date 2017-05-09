@@ -6,12 +6,13 @@ package interceptor
 import (
 	"time"
 
+	"github.com/TheThingsNetwork/go-utils/grpc/ttnctx"
 	"github.com/TheThingsNetwork/go-utils/log"
-	"github.com/TheThingsNetwork/ttn/api"
 	"github.com/TheThingsNetwork/ttn/utils/errors"
 	context "golang.org/x/net/context" //TODO change to "context", when protoc supports it
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 )
 
@@ -87,13 +88,16 @@ func fieldsFromContext(ctx context.Context) log.Fields {
 		}
 	}
 
-	md := api.MetadataFromContext(ctx)
+	md, ok := metadata.FromIncomingContext(ctx)
+	if !ok {
+		md, _ = metadata.FromOutgoingContext(ctx)
+	}
 
-	if id, err := api.IDFromMetadata(md); err == nil {
+	if id, err := ttnctx.IDFromMetadata(md); err == nil {
 		fields["CallerID"] = id
 	}
 
-	if serviceName, serviceVersion, _, err := api.ServiceInfoFromMetadata(md); err == nil {
+	if serviceName, serviceVersion, _, err := ttnctx.ServiceInfoFromMetadata(md); err == nil {
 		if serviceName != "" {
 			fields["ServiceName"] = serviceName
 		}
@@ -102,25 +106,25 @@ func fieldsFromContext(ctx context.Context) log.Fields {
 		}
 	}
 
-	if _, err := api.KeyFromMetadata(md); err == nil {
+	if _, err := ttnctx.KeyFromMetadata(md); err == nil {
 		if authType != "" {
 			authType += "+"
 		}
 		authType += "key"
 	}
 
-	if _, err := api.TokenFromMetadata(md); err == nil {
+	if _, err := ttnctx.TokenFromMetadata(md); err == nil {
 		if authType != "" {
 			authType += "+"
 		}
 		authType += "token"
 	}
 
-	if offset, err := api.OffsetFromMetadata(md); err == nil && offset != 0 {
+	if offset, err := ttnctx.OffsetFromMetadata(md); err == nil && offset != 0 {
 		fields["Offset"] = offset
 	}
 
-	if limit, err := api.LimitFromMetadata(md); err == nil && limit != 0 {
+	if limit, err := ttnctx.LimitFromMetadata(md); err == nil && limit != 0 {
 		fields["Limit"] = limit
 	}
 
