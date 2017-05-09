@@ -51,9 +51,11 @@ func (c *TokenCredentials) GetRequestMetadata(ctx context.Context, uri ...string
 		return map[string]string{tokenKey: token}, nil
 	}
 	if c.tokenFunc != nil {
+		var k string
 		if v, ok := md[c.tokenFuncKey]; ok && len(v) > 0 {
-			return map[string]string{tokenKey: c.tokenFunc(v[0])}, nil
+			k = v[0]
 		}
+		return map[string]string{tokenKey: c.tokenFunc(k)}, nil
 	}
 	if c.token != "" {
 		return map[string]string{tokenKey: c.token}, nil
