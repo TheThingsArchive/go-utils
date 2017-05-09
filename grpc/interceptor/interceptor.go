@@ -12,7 +12,6 @@ import (
 	context "golang.org/x/net/context" //TODO change to "context", when protoc supports it
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 )
 
@@ -88,10 +87,7 @@ func fieldsFromContext(ctx context.Context) log.Fields {
 		}
 	}
 
-	md, ok := metadata.FromIncomingContext(ctx)
-	if !ok {
-		md, _ = metadata.FromOutgoingContext(ctx)
-	}
+	md := ttnctx.MetadataFromIncomingContext(ctx)
 
 	if id, err := ttnctx.IDFromMetadata(md); err == nil {
 		fields["CallerID"] = id
