@@ -177,6 +177,8 @@ recv:
 				continue recv
 			}
 		}
+
+		return err
 	}
 }
 
