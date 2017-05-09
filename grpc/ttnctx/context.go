@@ -35,7 +35,7 @@ func TokenFromMetadata(md metadata.MD) (string, error) {
 func outgoingContextWithMergedMetadata(ctx context.Context, kv ...string) context.Context {
 	md := MetadataFromOutgoingContext(ctx)
 	md = metadata.Join(metadata.Pairs(kv...), md)
-	return metadata.NewContext(ctx, md)
+	return metadata.NewOutgoingContext(ctx, md)
 }
 
 // TokenFromIncomingContext gets the token from the incoming context or returns ErrNoToken
