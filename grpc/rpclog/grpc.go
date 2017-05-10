@@ -41,10 +41,11 @@ func UnaryServerInterceptor(log ttnlog.Interface) grpc.UnaryServerInterceptor {
 		log = log.WithFields(FieldsFromIncomingContext(ctx))
 		start := time.Now()
 		resp, err = handler(ctx, req)
-		if err != nil {
-			log = log.WithError(err)
-		}
 		log = log.WithField("duration", time.Since(start))
+		if err != nil {
+			log.WithError(err).Debug("rpc-server: call failed")
+			return
+		}
 		log.Debug("rpc-server: call done")
 		return
 	}
@@ -58,10 +59,11 @@ func StreamServerInterceptor(log ttnlog.Interface) grpc.StreamServerInterceptor 
 		start := time.Now()
 		log.Debug("rpc-server: stream starting")
 		err = handler(srv, ss)
-		if err != nil {
-			log = log.WithError(err)
-		}
 		log = log.WithField("duration", time.Since(start))
+		if err != nil {
+			log.WithError(err).Debug("rpc-server: stream failed")
+			return
+		}
 		log.Debug("rpc-server: stream done")
 		return
 	}
@@ -74,10 +76,11 @@ func UnaryClientInterceptor(log ttnlog.Interface) grpc.UnaryClientInterceptor {
 		log = log.WithFields(FieldsFromOutgoingContext(ctx))
 		start := time.Now()
 		err = invoker(ctx, method, req, reply, cc, opts...)
-		if err != nil {
-			log = log.WithError(err)
-		}
 		log = log.WithField("duration", time.Since(start))
+		if err != nil {
+			log.WithError(err).Debug("rpc-client: call failed")
+			return
+		}
 		log.Debug("rpc-client: call done")
 		return
 	}
@@ -90,6 +93,10 @@ func StreamClientInterceptor(log ttnlog.Interface) grpc.StreamClientInterceptor 
 		log = log.WithFields(FieldsFromOutgoingContext(ctx))
 		log.Debug("rpc-client: stream starting")
 		stream, err = streamer(ctx, desc, cc, method, opts...)
+		if err != nil {
+			log.Debug("rpc-client: stream failed")
+			return
+		}
 		go func() {
 			<-stream.Context().Done()
 			if err := stream.Context().Err(); err != nil {
