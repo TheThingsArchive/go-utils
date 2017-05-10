@@ -64,20 +64,20 @@ stream:
 	for {
 		if s.retries >= 0 {
 			backoff := s.backoff.Backoff(s.retries)
-			s.log.WithField("Duration", backoff).Debug("Stream backing off")
+			s.log.WithField("duration", backoff).Debug("restartstream: backing off")
 			time.Sleep(backoff)
 		}
-		s.log.Debug("Stream (re)starting")
+		s.log.Debug("restartstream: starting")
 		s.ClientStream, err = s.streamer(s.ctx, s.desc, s.cc, s.method, s.opts...)
 		if err == nil {
 			s.retries = 0
 			break
 		}
-		s.log.WithField("error", grpc.ErrorDesc(err)).Debug("Stream setup unsuccessful")
+		s.log.WithField("error", grpc.ErrorDesc(err)).Debug("restartstream: setup unsuccessful")
 		for _, retryable := range s.retryableCodes {
 			if grpc.Code(err) == retryable {
 				backoff := s.backoff.Backoff(s.retries)
-				s.log.WithField("Duration", backoff).Debug("Stream backing off")
+				s.log.WithField("duration", backoff).Debug("restartstream: backing off Start")
 				time.Sleep(backoff)
 				s.retries++
 				continue stream
@@ -87,14 +87,15 @@ stream:
 	}
 	log := s.log
 	if peer, ok := peer.FromContext(s.ClientStream.Context()); ok {
-		log = log.WithField("Peer", peer.Addr)
+		log = log.WithField("server-ip", peer.Addr)
 	}
-	log.Debug("Stream started")
 
 	if !s.desc.ClientStreams && s.argument != nil {
 		s.ClientStream.SendMsg(s.argument)
 		s.ClientStream.CloseSend()
 	}
+
+	log.Debug("restartstream: started")
 
 	return
 }
@@ -130,7 +131,7 @@ send:
 		for _, retryable := range s.retryableCodes {
 			if grpc.Code(err) == retryable {
 				backoff := s.backoff.Backoff(retries)
-				s.log.WithField("error", grpc.ErrorDesc(err)).WithField("Duration", backoff).Debug("SendMsg backing off")
+				s.log.WithField("error", grpc.ErrorDesc(err)).WithField("duration", backoff).Debug("restartstream: backing off SendMsg")
 				time.Sleep(backoff)
 				retries++
 				continue send
@@ -171,7 +172,7 @@ recv:
 					return err
 				}
 				backoff := s.backoff.Backoff(retries)
-				s.log.WithField("error", grpc.ErrorDesc(err)).WithField("Duration", backoff).Debug("RecvMsg backing off")
+				s.log.WithField("error", grpc.ErrorDesc(err)).WithField("duration", backoff).Debug("restartstream: backing off RecvMsg")
 				time.Sleep(backoff)
 				retries++
 				continue recv
@@ -192,7 +193,7 @@ recv:
 func Interceptor(settings Settings) grpc.StreamClientInterceptor {
 	return func(ctx context.Context, desc *grpc.StreamDesc, cc *grpc.ClientConn, method string, streamer grpc.Streamer, opts ...grpc.CallOption) (stream grpc.ClientStream, err error) {
 		s := &restartingStream{
-			log: log.Get().WithField("Method", method),
+			log: log.Get().WithField("method", method),
 
 			ctx:      ctx,
 			desc:     desc,
