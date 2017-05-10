@@ -25,7 +25,7 @@ func TestFieldsFromContext(t *testing.T) {
 		AuthInfo: credentials.TLSInfo{},
 	})
 
-	fields := FieldsFromContext(ctx)
+	fields := FieldsFromIncomingContext(ctx)
 	a.So(fields, ShouldContainKey, "caller-ip")
 	a.So(fields, ShouldContainKey, "auth-type")
 
@@ -36,7 +36,7 @@ func TestFieldsFromContext(t *testing.T) {
 			"token", "",
 			"service-version", "",
 		))
-		fields := FieldsFromContext(ctx)
+		fields := FieldsFromIncomingContext(ctx)
 		a.So(fields, ShouldContainKey, "id")
 		a.So(fields, ShouldContainKey, "auth-type")
 		a.So(fields["auth-type"], ShouldEqual, "tls,key")
@@ -48,7 +48,7 @@ func TestFieldsFromContext(t *testing.T) {
 			"id", "id",
 			"token", "token",
 		))
-		fields := FieldsFromContext(ctx)
+		fields := FieldsFromOutgoingContext(ctx)
 		a.So(fields, ShouldContainKey, "id")
 		a.So(fields, ShouldContainKey, "auth-type")
 		a.So(fields["auth-type"], ShouldEqual, "tls,token")

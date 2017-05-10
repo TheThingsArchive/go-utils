@@ -6,15 +6,15 @@ package rpclog
 import (
 	"strings"
 
-	"github.com/TheThingsNetwork/go-utils/log"
+	ttnlog "github.com/TheThingsNetwork/go-utils/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 )
 
-type _fields map[string][]string
+type fieldMap map[string][]string
 
-func (f _fields) add(key string, values ...string) {
+func (f fieldMap) add(key string, values ...string) {
 	if _, ok := f[key]; !ok {
 		f[key] = make([]string, 0, len(values))
 	}
@@ -26,8 +26,8 @@ func (f _fields) add(key string, values ...string) {
 	}
 }
 
-func (f _fields) LogFields() log.Fields {
-	fields := make(log.Fields)
+func (f fieldMap) LogFields() ttnlog.Fields {
+	fields := make(ttnlog.Fields)
 	for k, v := range f {
 		switch len(v) {
 		case 0:
@@ -43,7 +43,7 @@ func (f _fields) LogFields() log.Fields {
 // MDLogFields are logged from the context
 var MDLogFields = []string{"id", "service-name", "service-version", "limit", "offset"}
 
-func (f _fields) addFromMD(md metadata.MD) {
+func (f fieldMap) addFromMD(md metadata.MD) {
 	for _, key := range MDLogFields {
 		if v, ok := md[key]; ok {
 			f.add(key, v...)
@@ -57,20 +57,33 @@ func (f _fields) addFromMD(md metadata.MD) {
 	}
 }
 
-// FieldsFromContext returns peer information and MDLogFields from the given context
-func FieldsFromContext(ctx context.Context) log.Fields {
-	fields := make(_fields)
+func (f fieldMap) addFromPeer(peer *peer.Peer) {
+	f.add("caller-ip", peer.Addr.String())
+	if peer.AuthInfo != nil {
+		f.add("auth-type", peer.AuthInfo.AuthType())
+	}
+}
+
+// FieldsFromIncomingContext returns peer information and MDLogFields from the given context
+func FieldsFromIncomingContext(ctx context.Context) ttnlog.Fields {
+	fields := make(fieldMap)
 	if peer, ok := peer.FromContext(ctx); ok {
-		fields.add("caller-ip", peer.Addr.String())
-		if peer.AuthInfo != nil {
-			fields.add("auth-type", peer.AuthInfo.AuthType())
-		}
+		fields.addFromPeer(peer)
 	}
-	if in, ok := metadata.FromIncomingContext(ctx); ok {
-		fields.addFromMD(in)
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
+		fields.addFromMD(md)
 	}
-	if out, ok := metadata.FromOutgoingContext(ctx); ok {
-		fields.addFromMD(out)
+	return fields.LogFields()
+}
+
+// FieldsFromOutgoingContext returns peer information and MDLogFields from the given context
+func FieldsFromOutgoingContext(ctx context.Context) ttnlog.Fields {
+	fields := make(fieldMap)
+	if peer, ok := peer.FromContext(ctx); ok {
+		fields.addFromPeer(peer)
+	}
+	if md, ok := metadata.FromOutgoingContext(ctx); ok {
+		fields.addFromMD(md)
 	}
 	return fields.LogFields()
 }
