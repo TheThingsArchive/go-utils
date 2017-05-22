@@ -137,6 +137,8 @@ send:
 				continue send
 			}
 		}
+
+		return err
 	}
 }
 
