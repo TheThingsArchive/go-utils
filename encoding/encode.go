@@ -139,8 +139,8 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 		if (squash || include) && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
-				if strings.HasPrefix(prop, fieldName+".") {
-					newProperties = append(newProperties, strings.TrimPrefix(prop, fieldName+"."))
+				if strings.HasPrefix(prop, field.Name()+".") {
+					newProperties = append(newProperties, strings.TrimPrefix(prop, field.Name()+"."))
 				}
 			}
 			m, err := ToStringStringMap(tagName, val, newProperties...)
@@ -261,8 +261,8 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 		if (squash || include) && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
-				if strings.HasPrefix(prop, fieldName+".") {
-					newProperties = append(newProperties, strings.TrimPrefix(prop, fieldName+"."))
+				if strings.HasPrefix(prop, field.Name()+".") {
+					newProperties = append(newProperties, strings.TrimPrefix(prop, field.Name()+"."))
 				}
 			}
 			m, err := ToStringInterfaceMap(tagName, val, newProperties...)
