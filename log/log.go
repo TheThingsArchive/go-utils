@@ -20,7 +20,7 @@ type Interface interface {
 	WithError(error) Interface
 }
 
-var Noop = NoopLogger{}
+var Noop = noopLogger{}
 var defaultLogger Interface = Noop
 
 // Get returns the defaultLogger logger
