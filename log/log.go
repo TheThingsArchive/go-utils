@@ -20,7 +20,8 @@ type Interface interface {
 	WithError(error) Interface
 }
 
-var defaultLogger Interface = noopLogger{}
+var Noop = NoopLogger{}
+var defaultLogger Interface = Noop
 
 // Get returns the defaultLogger logger
 func Get() Interface {
