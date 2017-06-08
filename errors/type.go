@@ -1,5 +1,10 @@
 package errors
 
+import (
+	"fmt"
+	"strings"
+)
+
 type Type uint8
 
 const (
@@ -51,3 +56,44 @@ const (
 	// that has been deprecated and is no longer available
 	PermanentlyUnavailable
 )
+
+// string representations of the Types
+// keep up to date with the iota
+var str = []string{
+	"Unknown",
+	"Internal",
+	"Invalid argument",
+	"Out of range",
+	"Not found",
+	"Conflict",
+	"Already exists",
+	"Unauthorized",
+	"Permission denied",
+	"Timeout",
+	"Not implemented",
+	"Temporarily unavailable",
+	"Permanently unavailable",
+}
+
+// String implements stringer
+func (t Type) String() string {
+	return str[t]
+}
+
+// MarshalText implements TextMarsheler
+func (t Type) MarshalText() ([]byte, error) {
+	return []byte(t.String()), nil
+}
+
+// UnmarshalText implements TextUnmarsheler
+func (t *Type) UnmarshalText(text []byte) error {
+	enum := strings.ToLower(string(text))
+	for i, typ := range str {
+		if enum == strings.ToLower(typ) {
+			*t = Type(i)
+			return nil
+		}
+	}
+
+	return fmt.Errorf("Invalid event type")
+}
