@@ -41,8 +41,10 @@ var reg = &registry{
 }
 
 // Register registers a new error descriptor
-func Register(descriptor *ErrDescriptor) {
-	reg.Register(descriptor)
+func Register(descriptors ...*ErrDescriptor) {
+	for _, descriptor := range descriptors {
+		reg.Register(descriptor)
+	}
 }
 
 // Get returns an error descriptor based on an error code
