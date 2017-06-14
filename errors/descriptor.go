@@ -38,7 +38,7 @@ func (err *ErrDescriptor) New(attributes Attributes) Error {
 	}
 
 	return &impl{
-		message:    Format(err.MessageFormat, attributes, defaultValueFormatter),
+		message:    Format(err.MessageFormat, attributes),
 		code:       err.Code,
 		typ:        err.Type,
 		attributes: attributes,
