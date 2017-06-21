@@ -280,34 +280,39 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 		}
 
 		if opts.Has("cast") {
+			var t reflect.Type
 			switch opts.Value("cast") {
 			case "int64":
 				var v int64
-				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+				t = reflect.TypeOf(v)
 			case "int32":
 				var v int32
-				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+				t = reflect.TypeOf(v)
 			case "int16":
 				var v int16
-				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+				t = reflect.TypeOf(v)
 			case "int8":
 				var v int8
-				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+				t = reflect.TypeOf(v)
 			case "uint64":
 				var v uint64
-				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+				t = reflect.TypeOf(v)
 			case "uint32":
 				var v uint32
-				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+				t = reflect.TypeOf(v)
 			case "uint16":
 				var v uint16
-				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+				t = reflect.TypeOf(v)
 			case "uint8":
 				var v uint8
-				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+				t = reflect.TypeOf(v)
+			case "string":
+				var v string
+				t = reflect.TypeOf(v)
 			default:
 				panic(fmt.Errorf("Wrong cast type specified: %d", opts.Value("cast")))
 			}
+			fieldVal = fieldVal.Convert(t)
 		}
 
 		iface = fieldVal.Interface()
