@@ -2,8 +2,7 @@ package errors
 
 // Error is the interface og grpc errors
 type Error interface {
-	// Error returns the formatted error message
-	Error() string
+	error
 
 	// Code returns the error code
 	Code() Code
