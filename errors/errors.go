@@ -1,6 +1,6 @@
 package errors
 
-// Error is the interface og grpc errors
+// Error is the interface of portable errors
 type Error interface {
 	error
 
