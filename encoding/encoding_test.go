@@ -728,5 +728,20 @@ func TestNonUniqueKeys(t *testing.T) {
 		}()
 		a.So(err, s.ShouldResemble, expected)
 	}
+}
 
+func TestCastType(t *testing.T) {
+	a := s.New(t)
+
+	strct := struct {
+		Int64 uint64 `test:"i64,cast=int64"`
+	}{
+		42,
+	}
+
+	enc, err := ToStringInterfaceMap("test", strct)
+	if a.So(err, s.ShouldBeNil) && a.So(enc, s.ShouldHaveLength, 1) && a.So(enc, s.ShouldContainKey, "i64") {
+		var i64 int64
+		a.So(enc["i64"], s.ShouldHaveSameTypeAs, i64)
+	}
 }
