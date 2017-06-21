@@ -46,11 +46,21 @@ type tagOptions []string
 // Has returns true if opt is one of the options
 func (t tagOptions) Has(opt string) bool {
 	for _, hasOpt := range t {
-		if hasOpt == opt {
+		if hasOpt == opt || strings.HasPrefix(hasOpt, opt+"=") {
 			return true
 		}
 	}
 	return false
+}
+
+// Value returns value of tag option
+func (t tagOptions) Value(opt string) string {
+	for _, hasOpt := range t {
+		if strings.HasPrefix(hasOpt, opt+"=") {
+			return strings.TrimLeft(hasOpt, opt+"=")
+		}
+	}
+	return ""
 }
 
 func parseTag(tag string) (string, tagOptions) {
@@ -209,63 +219,107 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 // ToStringInterfaceMap encodes fields tagged with tagName in input into map[string]interface{}. Optional argument properties specifies fields to encode.
 func ToStringInterfaceMap(tagName string, input interface{}, properties ...string) (map[string]interface{}, error) {
 	vmap := imap(make(map[string]interface{}))
-	s := structs.New(input)
-	s.TagName = tagName
-	if len(properties) == 0 {
-		properties = s.Names()
+
+	val := reflect.ValueOf(input)
+	if val.Kind() == reflect.Ptr {
+		val = val.Elem()
 	}
 
-	for _, field := range s.Fields() {
-		if !field.IsExported() {
+	t := val.Type()
+
+	if len(properties) == 0 {
+		for i := 0; i < t.NumField(); i++ {
+			field := t.Field(i)
+			if _, ok := field.Tag.Lookup(tagName); ok {
+				properties = append(properties, field.Name)
+			}
+		}
+	}
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		if field.PkgPath != "" {
+			continue
+		}
+		if !stringInSlice(field.Name, properties) {
 			continue
 		}
 
-		if !stringInSlice(field.Name(), properties) {
-			continue
-		}
-
-		fieldName, opts := parseTag(field.Tag(tagName))
+		fieldName, opts := parseTag(field.Tag.Get(tagName))
 		squash, omitempty, include := opts.Has("squash"), opts.Has("omitempty"), opts.Has("include")
 		if !squash && (fieldName == "" || fieldName == "-") {
 			continue
 		}
 
-		val := field.Value()
+		fieldVal := val.Field(i)
 
+		iface := fieldVal.Interface()
 		if omitempty {
-			if field.IsZero() {
+			if reflect.DeepEqual(iface, reflect.Zero(field.Type).Interface()) {
 				continue
 			}
-			if z, ok := val.(isZeroer); ok && z.IsZero() {
+			if z, ok := iface.(isZeroer); ok && z.IsZero() {
 				continue
 			}
-			if z, ok := val.(isEmptier); ok && z.IsEmpty() {
+			if z, ok := iface.(isEmptier); ok && z.IsEmpty() {
 				continue
 			}
 		}
 
-		kind := field.Kind()
+		kind := fieldVal.Kind()
 		if kind == reflect.Ptr {
-			v := reflect.ValueOf(val)
-			if v.IsNil() {
+			if fieldVal.IsNil() {
 				if fieldName != "" && fieldName != "-" {
 					vmap.Set(fieldName, nil)
 				}
 				continue
 			}
-			elem := v.Elem()
-			kind = elem.Kind()
-			val = elem.Interface()
+			fieldVal = fieldVal.Elem()
+			kind = fieldVal.Kind()
 		}
+
+		if opts.Has("cast") {
+			switch opts.Value("cast") {
+			case "int64":
+				var v int64
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "int32":
+				var v int32
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "int16":
+				var v int16
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "int8":
+				var v int8
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "uint64":
+				var v uint64
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "uint32":
+				var v uint32
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "uint16":
+				var v uint16
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "uint8":
+				var v uint8
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			default:
+				panic(fmt.Errorf("Wrong cast type specified: %d", opts.Value("cast")))
+			}
+		}
+
+		iface = fieldVal.Interface()
 
 		if (squash || include) && kind == reflect.Struct {
 			var newProperties []string
 			for _, prop := range properties {
-				if strings.HasPrefix(prop, field.Name()+".") {
-					newProperties = append(newProperties, strings.TrimPrefix(prop, field.Name()+"."))
+				if strings.HasPrefix(prop, field.Name+".") {
+					newProperties = append(newProperties, strings.TrimPrefix(prop, field.Name+"."))
 				}
 			}
-			m, err := ToStringInterfaceMap(tagName, val, newProperties...)
+			m, err := ToStringInterfaceMap(tagName, iface, newProperties...)
 			if err != nil {
 				return nil, err
 			}
@@ -281,7 +335,7 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 			continue
 		}
 
-		vmap.Set(fieldName, val)
+		vmap.Set(fieldName, iface)
 	}
 	return vmap, nil
 }
