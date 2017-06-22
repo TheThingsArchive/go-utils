@@ -280,39 +280,48 @@ func ToStringInterfaceMap(tagName string, input interface{}, properties ...strin
 		}
 
 		if opts.Has("cast") {
-			var t reflect.Type
-			switch opts.Value("cast") {
-			case "int64":
-				var v int64
-				t = reflect.TypeOf(v)
-			case "int32":
-				var v int32
-				t = reflect.TypeOf(v)
-			case "int16":
-				var v int16
-				t = reflect.TypeOf(v)
+			switch t := opts.Value("cast"); t {
+			case "int":
+				var v int
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
 			case "int8":
 				var v int8
-				t = reflect.TypeOf(v)
-			case "uint64":
-				var v uint64
-				t = reflect.TypeOf(v)
-			case "uint32":
-				var v uint32
-				t = reflect.TypeOf(v)
-			case "uint16":
-				var v uint16
-				t = reflect.TypeOf(v)
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "int16":
+				var v int16
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "int32":
+				var v int32
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "int64":
+				var v int64
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "uint":
+				var v uint
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
 			case "uint8":
 				var v uint8
-				t = reflect.TypeOf(v)
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "uint16":
+				var v uint16
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "uint32":
+				var v uint32
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "uint64":
+				var v uint64
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "float32":
+				var v float32
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
+			case "float64":
+				var v float64
+				fieldVal = fieldVal.Convert(reflect.TypeOf(v))
 			case "string":
-				var v string
-				t = reflect.TypeOf(v)
+				fieldVal = reflect.ValueOf(fmt.Sprint(iface))
 			default:
-				panic(fmt.Errorf("Wrong cast type specified: %d", opts.Value("cast")))
+				panic(fmt.Sprintf("Wrong cast type specified: %s", t))
 			}
-			fieldVal = fieldVal.Convert(t)
 		}
 
 		iface = fieldVal.Interface()
