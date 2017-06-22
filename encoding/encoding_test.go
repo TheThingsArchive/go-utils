@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"strconv"
 	"testing"
 	"time"
@@ -734,14 +735,65 @@ func TestCastType(t *testing.T) {
 	a := s.New(t)
 
 	strct := struct {
-		Int64 uint64 `test:"i64,cast=int64"`
+		Int     uint        `test:"Int,cast=int"`
+		Int8    uint8       `test:"Int8,cast=int8"`
+		Int16   uint16      `test:"Int16,cast=int16"`
+		Int32   uint32      `test:"Int32,cast=int32"`
+		Int64   uint64      `test:"Int64,cast=int64"`
+		Uint    int         `test:"Uint,cast=uint"`
+		Uint8   int8        `test:"Uint8,cast=uint8"`
+		Uint16  int16       `test:"Uint16,cast=uint16"`
+		Uint32  int32       `test:"Uint32,cast=uint32"`
+		Uint64  int64       `test:"Uint64,cast=uint64"`
+		Float32 float64     `test:"Float32,cast=float32"`
+		Float64 float32     `test:"Float64,cast=float64"`
+		String  interface{} `test:"String,cast=string"`
 	}{
-		42,
+		Int:     42,
+		Int8:    42,
+		Int16:   42,
+		Int32:   42,
+		Int64:   42,
+		Uint:    42,
+		Uint8:   42,
+		Uint16:  42,
+		Uint32:  42,
+		Uint64:  42,
+		Float32: 42,
+		Float64: 42,
+		String: struct {
+			a int64
+			b interface{}
+			c bool
+			d func()
+		}{42, struct{ z int }{42}, true, func() {}},
 	}
 
 	enc, err := ToStringInterfaceMap("test", strct)
-	if a.So(err, s.ShouldBeNil) && a.So(enc, s.ShouldHaveLength, 1) && a.So(enc, s.ShouldContainKey, "i64") {
-		var i64 int64
-		a.So(enc["i64"], s.ShouldHaveSameTypeAs, i64)
+	if a.So(err, s.ShouldBeNil) && a.So(enc, s.ShouldHaveLength, reflect.ValueOf(strct).NumField()) {
+		for name, v := range map[string]interface{}{
+			"Int":     int(strct.Int),
+			"Int8":    int8(strct.Int8),
+			"Int16":   int16(strct.Int16),
+			"Int32":   int32(strct.Int32),
+			"Int64":   int64(strct.Int64),
+			"Uint":    uint(strct.Uint),
+			"Uint8":   uint8(strct.Uint8),
+			"Uint16":  uint16(strct.Uint16),
+			"Uint32":  uint32(strct.Uint32),
+			"Uint64":  uint64(strct.Uint64),
+			"Float32": float32(strct.Float32),
+			"Float64": float64(strct.Float64),
+			"String":  fmt.Sprint(strct.String),
+		} {
+			a.So(enc, s.ShouldContainKey, name)
+			a.So(enc[name], s.ShouldHaveSameTypeAs, v)
+			a.So(enc[name], s.ShouldEqual, v)
+		}
 	}
+
+	invalid := struct {
+		A int `test:"a,cast=unknown"`
+	}{42}
+	a.So(func() { ToStringInterfaceMap("test", invalid) }, s.ShouldPanicWith, "Wrong cast type specified: unknown")
 }
