@@ -57,7 +57,7 @@ func (t tagOptions) Has(opt string) bool {
 func (t tagOptions) Value(opt string) string {
 	for _, hasOpt := range t {
 		if strings.HasPrefix(hasOpt, opt+"=") {
-			return strings.TrimLeft(hasOpt, opt+"=")
+			return strings.TrimPrefix(hasOpt, opt+"=")
 		}
 	}
 	return ""
