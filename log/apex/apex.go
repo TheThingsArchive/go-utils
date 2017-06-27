@@ -50,6 +50,17 @@ func (w *apexInterfaceWrapper) WithError(err error) log.Interface {
 	return &apexEntryWrapper{w.Logger.WithError(err)}
 }
 
+// MustParseLevel is a convience function that parses the passed in string
+// as a log level and sets the log level of the apexInterfaceWrapper to the
+// parsed level. If an error occurs it will handle it with w.Fatal
+func (w *apexInterfaceWrapper) MustParseLevel(s string) {
+	level, err := ParseLevel(s)
+	if err != nil {
+		w.WithError(err).WithField("level", s).Fatal("Could not parse log level")
+	}
+	w.Level = level
+}
+
 type apexEntryWrapper struct {
 	*apex.Entry
 }
