@@ -9,32 +9,45 @@ import (
 )
 
 // Stdout logging apex/log
-func Stdout() log.Interface {
+func Stdout() *apexInterfaceWrapper {
 	return Wrap(&apex.Logger{
 		Level:   apex.InfoLevel,
 		Handler: cli.New(os.Stdout),
 	})
 }
 
+const (
+	DebugLevel = apex.DebugLevel
+	InfoLevel  = apex.InfoLevel
+	WarnLevel  = apex.WarnLevel
+	ErrorLevel = apex.ErrorLevel
+	FatalLevel = apex.FatalLevel
+)
+
+var (
+	ParseLevel     = apex.ParseLevel
+	MustParseLevel = apex.MustParseLevel
+)
+
 // Wrap apex.Interface
-func Wrap(ctx apex.Interface) log.Interface {
+func Wrap(ctx *apex.Logger) *apexInterfaceWrapper {
 	return &apexInterfaceWrapper{ctx}
 }
 
 type apexInterfaceWrapper struct {
-	apex.Interface
+	*apex.Logger
 }
 
 func (w *apexInterfaceWrapper) WithField(k string, v interface{}) log.Interface {
-	return &apexEntryWrapper{w.Interface.WithField(k, v)}
+	return &apexEntryWrapper{w.Logger.WithField(k, v)}
 }
 
 func (w *apexInterfaceWrapper) WithFields(fields log.Fields) log.Interface {
-	return &apexEntryWrapper{w.Interface.WithFields(apex.Fields(fields))}
+	return &apexEntryWrapper{w.Logger.WithFields(apex.Fields(fields))}
 }
 
 func (w *apexInterfaceWrapper) WithError(err error) log.Interface {
-	return &apexEntryWrapper{w.Interface.WithError(err)}
+	return &apexEntryWrapper{w.Logger.WithError(err)}
 }
 
 type apexEntryWrapper struct {
