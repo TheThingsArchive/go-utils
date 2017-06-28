@@ -90,6 +90,14 @@ func (c *Definition) Bind(v interface{}) error {
 	return c.bind("", ve)
 }
 
+// MustBind is the same as Bind but panics when an error occurs
+func (c *Definition) MustBind(v interface{}) {
+	err := c.Bind(v)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func (c *Definition) bind(prefix string, ve reflect.Value) error {
 	vt := ve.Type()
 
