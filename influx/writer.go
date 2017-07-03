@@ -12,6 +12,7 @@ import (
 	influxdb "github.com/influxdata/influxdb/client/v2"
 )
 
+// DefaultScalingInterval represents default scaling interval(time to wait before a new writer is started/killed) used by batching writer.
 const DefaultScalingInterval = 500 * time.Millisecond
 
 func newBatchPoints(bpConf influxdb.BatchPointsConfig) influxdb.BatchPoints {
@@ -38,6 +39,7 @@ type singlePointWriter struct {
 	writer BatchPointWriter
 }
 
+// NewSinglePointWriter creates new PointWriter, which writes points one-by-one
 func NewSinglePointWriter(log ttnlog.Interface, w BatchPointWriter) PointWriter {
 	return &singlePointWriter{
 		log:    log,
@@ -93,7 +95,7 @@ func writeInBatches(log ttnlog.Interface, w BatchPointWriter, bpConf influxdb.Ba
 			for _, p := range points {
 				go p.pushError(err)
 			}
-			points = make([]*batchPoint, 0, len(points))
+			points = points[:0]
 		}
 	}
 }
@@ -107,6 +109,7 @@ type batchingWriter struct {
 	pointChans map[influxdb.BatchPointsConfig]chan *batchPoint
 }
 
+// NewBatchingWriter creates new PointWriter, which writes points in batches and scales automatically according to scalingInterval.
 func NewBatchingWriter(log ttnlog.Interface, w BatchPointWriter, scalingInterval time.Duration) PointWriter {
 	return &batchingWriter{
 		log:             log,
@@ -125,10 +128,10 @@ func (w *batchingWriter) Write(bpConf influxdb.BatchPointsConfig, p *influxdb.Po
 		ch, ok = w.pointChans[bpConf]
 		if !ok {
 			ch = make(chan *batchPoint)
+			w.pointChans[bpConf] = ch
+			go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch)
 		}
-		w.pointChans[bpConf] = ch
 		w.mutex.Unlock()
-		go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch)
 	}
 
 	point := &batchPoint{
