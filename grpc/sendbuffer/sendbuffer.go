@@ -5,11 +5,13 @@
 package sendbuffer
 
 import (
+	"context"
 	"sync/atomic"
 
 	ttnlog "github.com/TheThingsNetwork/go-utils/log"
 	"github.com/golang/protobuf/ptypes/empty"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 var slack = 4
@@ -54,7 +56,20 @@ func (s *Stream) SendMsg(msg interface{}) {
 }
 
 // Run the stream
-func (s *Stream) Run() error {
+func (s *Stream) Run() (err error) {
+	defer func() {
+		if err != nil {
+			if grpc.Code(err) == codes.Canceled {
+				err = context.Canceled
+				return
+			}
+			if grpc.Code(err) == codes.DeadlineExceeded {
+				err = context.DeadlineExceeded
+				return
+			}
+		}
+	}()
+
 	stream, err := s.setupFunc()
 	if err != nil {
 		return err
