@@ -71,9 +71,9 @@ func TestBatchWriter(t *testing.T) {
 
 		var w *BatchingWriter
 		if mw < 0 {
-			w = NewBatchingWriter(ttnlog.Get(), mock, ScalingInterval)
+			w = NewBatchingWriter(ttnlog.Get(), mock, WithScalingInterval(ScalingInterval))
 		} else {
-			w = NewBatchingWriter(ttnlog.Get(), mock, ScalingInterval, WithInstanceLimit(uint(mw)))
+			w = NewBatchingWriter(ttnlog.Get(), mock, WithScalingInterval(ScalingInterval), WithInstanceLimit(uint(mw)))
 			a.So(w.limit, s.ShouldEqual, mw)
 		}
 

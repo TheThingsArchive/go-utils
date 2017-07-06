@@ -187,12 +187,19 @@ func WithInstanceLimit(v uint) BatchingWriterOption {
 	}
 }
 
-// NewBatchingWriter creates new BatchingWriter.
-func NewBatchingWriter(log ttnlog.Interface, w BatchPointsWriter, scalingInterval time.Duration, opts ...BatchingWriterOption) *BatchingWriter {
+// WithInstanceLimit sets a limit on amount of additional instances spawned by BatchingWriter
+func WithScalingInterval(v time.Duration) BatchingWriterOption {
+	return func(w *BatchingWriter) {
+		w.scalingInterval = v
+	}
+}
+
+// NewBatchingWriter creates new BatchingWriter. If WithScalingInterval is not specified, DefaultScalingInterval value is used.
+func NewBatchingWriter(log ttnlog.Interface, w BatchPointsWriter, opts ...BatchingWriterOption) *BatchingWriter {
 	bw := &BatchingWriter{
 		log:             log,
 		writer:          w,
-		scalingInterval: scalingInterval,
+		scalingInterval: DefaultScalingInterval,
 		pointChans:      make(map[influxdb.BatchPointsConfig]chan *batchPoint),
 	}
 	bw.spawnAdditional = bw.spawnAdditionalWithoutCheck
