@@ -31,7 +31,6 @@ var DefaultSettings = Settings{
 		codes.DeadlineExceeded, // context.WithDeadline
 		codes.Aborted,
 		codes.Unavailable,
-		codes.Internal,
 	},
 	Backoff: backoff.DefaultConfig,
 }
