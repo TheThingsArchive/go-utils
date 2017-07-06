@@ -26,8 +26,6 @@ func init() {
 	}))
 }
 
-const scalingInterval = time.Millisecond
-
 type MockBatchPointWriter struct {
 	assertion *s.Assertion
 
@@ -43,7 +41,7 @@ func newMockBatchPointWriter(a *s.Assertion) *MockBatchPointWriter {
 }
 
 func (w *MockBatchPointWriter) Write(bp influxdb.BatchPoints) error {
-	time.Sleep(scalingInterval)
+	time.Sleep(ScalingInterval)
 	var err error
 	if random.Bool() {
 		err = errors.New("test")
@@ -58,12 +56,29 @@ func (w *MockBatchPointWriter) Write(bp influxdb.BatchPoints) error {
 	return err
 }
 
-const NumEntries = 100
+const (
+	ScalingInterval = time.Millisecond
+	NumEntries      = 100
+	MaxWriters      = 2
+)
 
 func TestBatchWriter(t *testing.T) {
 	a := s.New(t)
 	mock := newMockBatchPointWriter(a)
-	w := NewBatchingWriter(ttnlog.Get(), mock, scalingInterval)
+	w := NewBatchingWriter(ttnlog.Get(), mock, ScalingInterval, MaxWriters)
+
+	a.So(w.maxWriters, s.ShouldEqual, MaxWriters)
+	closeCh := make(chan struct{})
+	go func() {
+		for {
+			select {
+			case <-time.After(ScalingInterval):
+				a.So(w.activeWriters, s.ShouldBeLessThanOrEqualTo, MaxWriters+1)
+			case <-closeCh:
+				return
+			}
+		}
+	}()
 	wg := &sync.WaitGroup{}
 	expected := make(map[*influxdb.Point]bool)
 	for i := 0; i < NumEntries; i++ {
@@ -79,6 +94,7 @@ func TestBatchWriter(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+	close(closeCh)
 
 	a.So(mock.results, s.ShouldHaveLength, len(expected))
 	for p := range expected {
