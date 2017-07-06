@@ -15,6 +15,7 @@ import (
 	ttnapex "github.com/TheThingsNetwork/go-utils/log/apex"
 	"github.com/TheThingsNetwork/ttn/utils/random"
 	apex "github.com/apex/log"
+	"github.com/fortytw2/leaktest"
 	influxdb "github.com/influxdata/influxdb/client/v2"
 	s "github.com/smartystreets/assertions"
 )
@@ -58,7 +59,7 @@ func (w *MockBatchPointWriter) Write(bp influxdb.BatchPoints) error {
 
 const (
 	ScalingInterval = time.Millisecond
-	NumEntries      = 100
+	NumEntries      = 200
 )
 
 func TestBatchWriter(t *testing.T) {
@@ -77,39 +78,46 @@ func TestBatchWriter(t *testing.T) {
 			a.So(w.limit, s.ShouldEqual, mw)
 		}
 
-		closeCh := make(chan struct{})
+		checkCh := make(chan struct{})
 
 		wg := &sync.WaitGroup{}
 		expected := make(map[*influxdb.Point]bool)
-		once := &sync.Once{}
 		for i := 0; i < NumEntries; i++ {
-			wg.Add(1)
 			p := &influxdb.Point{}
 			expected[p] = true
+			if i == 0 {
+				// one goroutine is spawned after the inital write, it should stay alive forever
+				err := w.Write(influxdb.BatchPointsConfig{}, p)
+				a.So(err, s.ShouldEqual, mock.results[p])
+				go func() {
+					defer leaktest.Check(t)()
+					checkCh <- struct{}{}
+					for {
+						select {
+						case <-time.After(ScalingInterval):
+							if mw == 0 {
+								a.So(w.active, s.ShouldEqual, 1)
+								continue
+							}
+
+							max := NumEntries
+							if mw > 0 {
+								max = mw + 1
+							}
+							a.So(w.active, s.ShouldBeBetweenOrEqual, 1, max)
+						case <-checkCh:
+							return
+						}
+					}
+				}()
+				// wait for leaktest to count active goroutines
+				<-checkCh
+				continue
+			}
+
+			wg.Add(1)
 			go func() {
 				err := w.Write(influxdb.BatchPointsConfig{}, p)
-
-				once.Do(func() {
-					go func() {
-						for {
-							select {
-							case <-time.After(ScalingInterval):
-								if mw == 0 {
-									a.So(w.active, s.ShouldEqual, 1)
-									continue
-								}
-
-								max := NumEntries
-								if mw > 0 {
-									max = mw + 1
-								}
-								a.So(w.active, s.ShouldBeBetweenOrEqual, 1, max)
-							case <-closeCh:
-								return
-							}
-						}
-					}()
-				})
 
 				mock.RLock()
 				a.So(err, s.ShouldEqual, mock.results[p])
@@ -118,7 +126,7 @@ func TestBatchWriter(t *testing.T) {
 			}()
 		}
 		wg.Wait()
-		close(closeCh)
+		close(checkCh)
 
 		a.So(mock.results, s.ShouldHaveLength, len(expected))
 		for p := range expected {
