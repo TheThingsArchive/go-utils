@@ -64,18 +64,12 @@ const (
 
 func TestBatchWriter(t *testing.T) {
 	a := s.New(t)
-	for _, mw := range []int{
-		-1, 0, 100,
+	for _, mw := range []uint{
+		0, 1, 100,
 	} {
 		mock := newMockBatchPointWriter(a)
 
-		var w *BatchingWriter
-		if mw < 0 {
-			w = NewBatchingWriter(ttnlog.Get(), mock, WithScalingInterval(ScalingInterval))
-		} else {
-			w = NewBatchingWriter(ttnlog.Get(), mock, WithScalingInterval(ScalingInterval), WithInstanceLimit(uint(mw)))
-			a.So(w.limit, s.ShouldEqual, mw)
-		}
+		w := NewBatchingWriter(ttnlog.Get(), mock, WithScalingInterval(ScalingInterval), WithInstanceLimit(uint(mw)))
 
 		checkCh := make(chan struct{})
 

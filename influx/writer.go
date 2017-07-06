@@ -12,8 +12,11 @@ import (
 	influxdb "github.com/influxdata/influxdb/client/v2"
 )
 
-// DefaultScalingInterval represents default scaling interval(time to wait before a new writer is started/killed) used by batching writer.
+// DefaultScalingInterval represents default scaling interval(time to wait before a new writer is started/killed) used by BatchingWriter.
 const DefaultScalingInterval = 500 * time.Millisecond
+
+// DefaultInstanceLimit represents default limit on instances spawned by BatchingWriter.
+const DefaultInstanceLimit = 100
 
 // newBatchPoints creates new influxdb.BatchPoints with specified bpConf.
 // Panics on errors.
@@ -129,49 +132,6 @@ type BatchingWriter struct {
 
 	pointChanMutex sync.RWMutex
 	pointChans     map[influxdb.BatchPointsConfig]chan *batchPoint
-
-	spawnAdditional func(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint)
-	spawnInitial    func(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig) (ch chan *batchPoint)
-}
-
-func (w *BatchingWriter) spawnAdditionalWithoutCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint) {
-	go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch, false)
-}
-
-func (w *BatchingWriter) spawnAdditionalWithCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint) {
-	w.limitMutex.RLock()
-	w.activeMutex.RLock()
-	spawnNew := w.active < w.limit
-	w.activeMutex.RUnlock()
-
-	if spawnNew {
-		w.activeMutex.Lock()
-		if w.active < w.limit {
-			w.active++
-			w.spawnAdditionalWithoutCheck(log, bpConf, ch)
-		}
-		w.activeMutex.Unlock()
-	}
-	w.limitMutex.RUnlock()
-}
-
-func (w *BatchingWriter) spawnInitialWithoutCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig) chan *batchPoint {
-	ch := make(chan *batchPoint)
-	w.pointChans[bpConf] = ch
-	go writeInBatches(log, w.writer, bpConf, w.scalingInterval, ch, true)
-	return ch
-}
-
-func (w *BatchingWriter) spawnInitialWithCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig) chan *batchPoint {
-	w.activeMutex.Lock()
-	w.active++
-	w.activeMutex.Unlock()
-
-	w.limitMutex.Lock()
-	w.limit++
-	w.limitMutex.Unlock()
-
-	return w.spawnInitialWithoutCheck(log, bpConf)
 }
 
 // BatchingWriterOption is passed to the constructor of BatchingWriter to configure it accordingly
@@ -181,9 +141,6 @@ type BatchingWriterOption func(w *BatchingWriter)
 func WithInstanceLimit(v uint) BatchingWriterOption {
 	return func(w *BatchingWriter) {
 		w.limit = v
-		w.log = w.log.WithField("limit", v)
-		w.spawnAdditional = w.spawnAdditionalWithCheck
-		w.spawnInitial = w.spawnInitialWithCheck
 	}
 }
 
@@ -194,7 +151,7 @@ func WithScalingInterval(v time.Duration) BatchingWriterOption {
 	}
 }
 
-// NewBatchingWriter creates new BatchingWriter. If WithScalingInterval is not specified, DefaultScalingInterval value is used.
+// NewBatchingWriter creates new BatchingWriter. If WithScalingInterval is not specified, DefaultScalingInterval value is used. If WithInstanceLimit is not specified, DefaultInstanceLimit is used.
 func NewBatchingWriter(log ttnlog.Interface, w BatchPointsWriter, opts ...BatchingWriterOption) *BatchingWriter {
 	bw := &BatchingWriter{
 		log:             log,
@@ -202,11 +159,10 @@ func NewBatchingWriter(log ttnlog.Interface, w BatchPointsWriter, opts ...Batchi
 		scalingInterval: DefaultScalingInterval,
 		pointChans:      make(map[influxdb.BatchPointsConfig]chan *batchPoint),
 	}
-	bw.spawnAdditional = bw.spawnAdditionalWithoutCheck
-	bw.spawnInitial = bw.spawnInitialWithoutCheck
 	for _, opt := range opts {
 		opt(bw)
 	}
+	bw.log = bw.log.WithField("limit", bw.limit)
 	return bw
 }
 
@@ -221,7 +177,17 @@ func (w *BatchingWriter) Write(bpConf influxdb.BatchPointsConfig, p *influxdb.Po
 		w.pointChanMutex.Lock()
 		ch, ok = w.pointChans[bpConf]
 		if !ok {
-			ch = w.spawnInitial(log, bpConf)
+			w.activeMutex.Lock()
+			w.active++
+			w.activeMutex.Unlock()
+
+			w.limitMutex.Lock()
+			w.limit++
+			w.limitMutex.Unlock()
+
+			ch = make(chan *batchPoint)
+			w.pointChans[bpConf] = ch
+			go writeInBatches(log, w.writer, bpConf, w.scalingInterval, ch, true)
 		}
 		w.pointChanMutex.Unlock()
 	}
@@ -233,7 +199,20 @@ func (w *BatchingWriter) Write(bpConf influxdb.BatchPointsConfig, p *influxdb.Po
 	select {
 	case ch <- point:
 	case <-time.After(w.scalingInterval):
-		w.spawnAdditional(log, bpConf, ch)
+		w.limitMutex.RLock()
+		w.activeMutex.RLock()
+		spawnNew := w.active < w.limit
+		w.activeMutex.RUnlock()
+
+		if spawnNew {
+			w.activeMutex.Lock()
+			if w.active < w.limit {
+				w.active++
+				go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch, false)
+			}
+			w.activeMutex.Unlock()
+		}
+		w.limitMutex.RUnlock()
 		ch <- point
 	}
 	return <-point.errch
