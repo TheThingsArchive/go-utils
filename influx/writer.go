@@ -75,8 +75,6 @@ func writeInBatches(log ttnlog.Interface, w BatchPointsWriter, bpConf influxdb.B
 	log = log.WithField("config", bpConf)
 	log.Info("Batching writer instance created")
 
-	waitTime := scalingInterval
-
 	var points []*batchPoint
 	for {
 		select {
@@ -88,7 +86,7 @@ func writeInBatches(log ttnlog.Interface, w BatchPointsWriter, bpConf influxdb.B
 				case p := <-ch:
 					points = append(points, p)
 					continue
-				case <-time.After(waitTime):
+				case <-time.After(scalingInterval):
 					if !keepalive {
 						log.Info("Removing batching writer instance")
 						return
