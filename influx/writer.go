@@ -157,12 +157,16 @@ func NewBatchingWriter(log ttnlog.Interface, w BatchPointsWriter, opts ...Batchi
 		log:             log,
 		writer:          w,
 		scalingInterval: DefaultScalingInterval,
+		limit:           DefaultInstanceLimit,
 		pointChans:      make(map[influxdb.BatchPointsConfig]chan *batchPoint),
 	}
 	for _, opt := range opts {
 		opt(bw)
 	}
-	bw.log = bw.log.WithField("limit", bw.limit)
+	bw.log = bw.log.WithFields(ttnlog.Fields{
+		"limit":           bw.limit,
+		"scalingInterval": bw.scalingInterval,
+	})
 	return bw
 }
 
