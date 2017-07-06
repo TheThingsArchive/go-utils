@@ -114,8 +114,8 @@ func writeInBatches(log ttnlog.Interface, w BatchPointsWriter, bpConf influxdb.B
 // BatchingWriter is a PointWriter, which writes points in batches.
 // BatchingWriter scales automatically once it notices a delay of scalingInterval to write a batch of points and downscales if no points are supplied to an instance for a duration of scalingInterval.
 // BatchingWriter spawns an instance for each unique BatchPointsConfig specified and up to limit additional instances on top of that.
-// BatchingWriter does not limit the amount of instances if limit is set to 0. (There should be at least one instance)
-// Each instance of the writer is spawned in a separate goroutine.
+// BatchingWriter does not limit the amount of instances if limit is nil.
+// Each instance is spawned in a separate goroutine.
 type BatchingWriter struct {
 	log             ttnlog.Interface
 	writer          BatchPointsWriter
