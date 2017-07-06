@@ -71,10 +71,9 @@ func TestBatchWriter(t *testing.T) {
 
 		var w *BatchingWriter
 		if mw < 0 {
-			w = NewBatchingWriter(ttnlog.Get(), mock, ScalingInterval, nil)
+			w = NewBatchingWriter(ttnlog.Get(), mock, ScalingInterval)
 		} else {
-			v := uint(mw)
-			w = NewBatchingWriter(ttnlog.Get(), mock, ScalingInterval, &v)
+			w = NewBatchingWriter(ttnlog.Get(), mock, ScalingInterval, WithInstanceLimit(uint(mw)))
 			a.So(w.limit, s.ShouldEqual, mw)
 		}
 
@@ -92,19 +91,20 @@ func TestBatchWriter(t *testing.T) {
 				go func() {
 					defer leaktest.Check(t)()
 					checkCh <- struct{}{}
+					if mw < 0 {
+						<-checkCh
+						return
+					}
+
 					for {
 						select {
 						case <-time.After(ScalingInterval):
 							if mw == 0 {
 								a.So(w.active, s.ShouldEqual, 1)
-								continue
 							}
-
-							max := NumEntries
 							if mw > 0 {
-								max = mw + 1
+								a.So(w.active, s.ShouldBeBetweenOrEqual, 1, mw+1)
 							}
-							a.So(w.active, s.ShouldBeBetweenOrEqual, 1, max)
 						case <-checkCh:
 							return
 						}

@@ -72,7 +72,6 @@ func (p *batchPoint) pushError(err error) {
 }
 
 func writeInBatches(log ttnlog.Interface, w BatchPointsWriter, bpConf influxdb.BatchPointsConfig, scalingInterval time.Duration, ch <-chan *batchPoint, keepalive bool) {
-	log = log.WithField("config", bpConf)
 	log.Info("Batching writer instance created")
 
 	var points []*batchPoint
@@ -113,8 +112,10 @@ func writeInBatches(log ttnlog.Interface, w BatchPointsWriter, bpConf influxdb.B
 
 // BatchingWriter is a PointWriter, which writes points in batches.
 // BatchingWriter scales automatically once it notices a delay of scalingInterval to write a batch of points and downscales if no points are supplied to an instance for a duration of scalingInterval.
-// BatchingWriter spawns an instance for each unique BatchPointsConfig specified and up to limit additional instances on top of that.
+// BatchingWriter spawns an instance for each unique BatchPointsConfig specified and up to limit() additional instances on top of that.
 // BatchingWriter does not limit the amount of instances if limit is nil.
+// Maximum number of instances spawned is equal to amount of unique BatchPointsConfig passed plus value, specified by WithInstanceLimit option.
+// By default, BatchingWriter does not limit amount of instances.
 // Each instance is spawned in a separate goroutine.
 type BatchingWriter struct {
 	log             ttnlog.Interface
@@ -129,35 +130,15 @@ type BatchingWriter struct {
 	pointChanMutex sync.RWMutex
 	pointChans     map[influxdb.BatchPointsConfig]chan *batchPoint
 
-	spawn func(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint)
+	spawnAdditional func(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint)
+	spawnInitial    func(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig) (ch chan *batchPoint)
 }
 
-// NewBatchingWriter creates new BatchingWriter. If limit == nil, then BatchingWriter does not limit amount of instances spawned.
-func NewBatchingWriter(log ttnlog.Interface, w BatchPointsWriter, scalingInterval time.Duration, limit *uint) *BatchingWriter {
-	bw := &BatchingWriter{
-		log:             log,
-		writer:          w,
-		scalingInterval: scalingInterval,
-		pointChans:      make(map[influxdb.BatchPointsConfig]chan *batchPoint),
-	}
-	if limit != nil {
-		bw.limit = *limit
-		bw.log = bw.log.WithField("limit", bw.limit)
-		bw.spawn = bw.spawnInstanceWithCheck
-	} else {
-		bw.spawn = bw.spawnInstanceWithoutCheck
-	}
-	return bw
-}
-
-func (w *BatchingWriter) spawnInstanceWithoutCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint) {
-	w.activeMutex.Lock()
-	w.active++
+func (w *BatchingWriter) spawnAdditionalWithoutCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint) {
 	go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch, false)
-	w.activeMutex.Unlock()
 }
 
-func (w *BatchingWriter) spawnInstanceWithCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint) {
+func (w *BatchingWriter) spawnAdditionalWithCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig, ch chan *batchPoint) {
 	w.limitMutex.RLock()
 	w.activeMutex.RLock()
 	spawnNew := w.active < w.limit
@@ -167,15 +148,65 @@ func (w *BatchingWriter) spawnInstanceWithCheck(log ttnlog.Interface, bpConf inf
 		w.activeMutex.Lock()
 		if w.active < w.limit {
 			w.active++
-			go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch, false)
+			w.spawnAdditionalWithoutCheck(log, bpConf, ch)
 		}
 		w.activeMutex.Unlock()
 	}
 	w.limitMutex.RUnlock()
 }
 
+func (w *BatchingWriter) spawnInitialWithoutCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig) chan *batchPoint {
+	ch := make(chan *batchPoint)
+	w.pointChans[bpConf] = ch
+	go writeInBatches(log, w.writer, bpConf, w.scalingInterval, ch, true)
+	return ch
+}
+
+func (w *BatchingWriter) spawnInitialWithCheck(log ttnlog.Interface, bpConf influxdb.BatchPointsConfig) chan *batchPoint {
+	w.activeMutex.Lock()
+	w.active++
+	w.activeMutex.Unlock()
+
+	w.limitMutex.Lock()
+	w.limit++
+	w.limitMutex.Unlock()
+
+	return w.spawnInitialWithoutCheck(log, bpConf)
+}
+
+// BatchingWriterOption is passed to the constructor of BatchingWriter to configure it accordingly
+type BatchingWriterOption func(w *BatchingWriter)
+
+// WithInstanceLimit sets a limit on amount of additional instances spawned by BatchingWriter
+func WithInstanceLimit(v uint) BatchingWriterOption {
+	return func(w *BatchingWriter) {
+		w.limit = v
+		w.log = w.log.WithField("limit", v)
+		w.spawnAdditional = w.spawnAdditionalWithCheck
+		w.spawnInitial = w.spawnInitialWithCheck
+	}
+}
+
+// NewBatchingWriter creates new BatchingWriter.
+func NewBatchingWriter(log ttnlog.Interface, w BatchPointsWriter, scalingInterval time.Duration, opts ...BatchingWriterOption) *BatchingWriter {
+	bw := &BatchingWriter{
+		log:             log,
+		writer:          w,
+		scalingInterval: scalingInterval,
+		pointChans:      make(map[influxdb.BatchPointsConfig]chan *batchPoint),
+	}
+	bw.spawnAdditional = bw.spawnAdditionalWithoutCheck
+	bw.spawnInitial = bw.spawnInitialWithoutCheck
+	for _, opt := range opts {
+		opt(bw)
+	}
+	return bw
+}
+
 // Write delegates p to a running instance of BatchingWriter and spawns new instances as required.
 func (w *BatchingWriter) Write(bpConf influxdb.BatchPointsConfig, p *influxdb.Point) error {
+	log := w.log.WithField("config", bpConf)
+
 	w.pointChanMutex.RLock()
 	ch, ok := w.pointChans[bpConf]
 	w.pointChanMutex.RUnlock()
@@ -183,19 +214,7 @@ func (w *BatchingWriter) Write(bpConf influxdb.BatchPointsConfig, p *influxdb.Po
 		w.pointChanMutex.Lock()
 		ch, ok = w.pointChans[bpConf]
 		if !ok {
-			w.activeMutex.Lock()
-			w.active++
-			w.activeMutex.Unlock()
-
-			if w.limit != 0 {
-				w.limitMutex.Lock()
-				w.limit++
-				w.limitMutex.Unlock()
-			}
-
-			ch = make(chan *batchPoint)
-			w.pointChans[bpConf] = ch
-			go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch, true)
+			ch = w.spawnInitial(log, bpConf)
 		}
 		w.pointChanMutex.Unlock()
 	}
@@ -207,7 +226,7 @@ func (w *BatchingWriter) Write(bpConf influxdb.BatchPointsConfig, p *influxdb.Po
 	select {
 	case ch <- point:
 	case <-time.After(w.scalingInterval):
-		w.spawn(w.log, bpConf, ch)
+		w.spawnAdditional(log, bpConf, ch)
 		ch <- point
 	}
 	return <-point.errch
