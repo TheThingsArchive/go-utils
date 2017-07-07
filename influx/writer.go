@@ -16,7 +16,7 @@ import (
 const DefaultScalingInterval = 500 * time.Millisecond
 
 // DefaultInstanceLimit represents default limit on instances spawned by BatchingWriter.
-const DefaultInstanceLimit = 100
+const DefaultInstanceLimit = 5
 
 // newBatchPoints creates new influxdb.BatchPoints with specified bpConf.
 // Panics on errors.
