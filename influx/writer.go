@@ -125,10 +125,9 @@ type BatchingWriter struct {
 	writer          BatchPointsWriter
 	scalingInterval time.Duration
 
-	activeMutex sync.RWMutex
-	active      uint
-	limitMutex  sync.RWMutex
-	limit       uint
+	mutex  sync.RWMutex
+	active uint
+	limit  uint
 
 	pointChanMutex sync.RWMutex
 	pointChans     map[influxdb.BatchPointsConfig]chan *batchPoint
@@ -181,13 +180,10 @@ func (w *BatchingWriter) Write(bpConf influxdb.BatchPointsConfig, p *influxdb.Po
 		w.pointChanMutex.Lock()
 		ch, ok = w.pointChans[bpConf]
 		if !ok {
-			w.activeMutex.Lock()
+			w.mutex.Lock()
 			w.active++
-			w.activeMutex.Unlock()
-
-			w.limitMutex.Lock()
 			w.limit++
-			w.limitMutex.Unlock()
+			w.mutex.Unlock()
 
 			ch = make(chan *batchPoint)
 			w.pointChans[bpConf] = ch
@@ -203,20 +199,12 @@ func (w *BatchingWriter) Write(bpConf influxdb.BatchPointsConfig, p *influxdb.Po
 	select {
 	case ch <- point:
 	case <-time.After(w.scalingInterval):
-		w.limitMutex.RLock()
-		w.activeMutex.RLock()
-		spawnNew := w.active < w.limit
-		w.activeMutex.RUnlock()
-
-		if spawnNew {
-			w.activeMutex.Lock()
-			if w.active < w.limit {
-				w.active++
-				go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch, false)
-			}
-			w.activeMutex.Unlock()
+		w.mutex.Lock()
+		if w.active < w.limit {
+			w.active++
+			go writeInBatches(w.log, w.writer, bpConf, w.scalingInterval, ch, false)
 		}
-		w.limitMutex.RUnlock()
+		w.mutex.Unlock()
 		ch <- point
 	}
 	return <-point.errch
