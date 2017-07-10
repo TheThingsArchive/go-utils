@@ -52,6 +52,7 @@ type restartingStream struct {
 	retries        int
 
 	sync.RWMutex
+	cancel context.CancelFunc
 	grpc.ClientStream
 }
 
@@ -66,8 +67,13 @@ stream:
 			s.log.WithField("duration", backoff).Debug("restartstream: backing off")
 			time.Sleep(backoff)
 		}
+		if s.cancel != nil {
+			s.cancel()
+		}
 		s.log.Debug("restartstream: starting")
-		s.ClientStream, err = s.streamer(s.ctx, s.desc, s.cc, s.method, s.opts...)
+		var ctx context.Context
+		ctx, s.cancel = context.WithCancel(s.ctx)
+		s.ClientStream, err = s.streamer(ctx, s.desc, s.cc, s.method, s.opts...)
 		if err == nil {
 			s.retries = 0
 			break
