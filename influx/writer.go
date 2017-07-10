@@ -5,6 +5,7 @@ package influx
 
 import (
 	"fmt"
+	"runtime"
 	"sync"
 	"time"
 
@@ -16,7 +17,7 @@ import (
 const DefaultScalingInterval = 500 * time.Millisecond
 
 // DefaultInstanceLimit represents default limit on instances spawned by BatchingWriter.
-const DefaultInstanceLimit = 5
+var DefaultInstanceLimit = uint(runtime.NumCPU())
 
 // newBatchPoints creates new influxdb.BatchPoints with specified bpConf.
 // Panics on errors.
