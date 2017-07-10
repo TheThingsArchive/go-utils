@@ -15,6 +15,7 @@ import (
 	ttnapex "github.com/TheThingsNetwork/go-utils/log/apex"
 	"github.com/TheThingsNetwork/ttn/utils/random"
 	apex "github.com/apex/log"
+	"github.com/fortytw2/leaktest"
 	influxdb "github.com/influxdata/influxdb/client/v2"
 	s "github.com/smartystreets/assertions"
 )
@@ -25,8 +26,6 @@ func init() {
 		Handler: cli.New(os.Stdout),
 	}))
 }
-
-const scalingInterval = time.Millisecond
 
 type MockBatchPointWriter struct {
 	assertion *s.Assertion
@@ -43,7 +42,7 @@ func newMockBatchPointWriter(a *s.Assertion) *MockBatchPointWriter {
 }
 
 func (w *MockBatchPointWriter) Write(bp influxdb.BatchPoints) error {
-	time.Sleep(scalingInterval)
+	time.Sleep(ScalingInterval)
 	var err error
 	if random.Bool() {
 		err = errors.New("test")
@@ -58,31 +57,75 @@ func (w *MockBatchPointWriter) Write(bp influxdb.BatchPoints) error {
 	return err
 }
 
-const NumEntries = 100
+const (
+	ScalingInterval = time.Millisecond
+	NumEntries      = 200
+)
 
 func TestBatchWriter(t *testing.T) {
 	a := s.New(t)
-	mock := newMockBatchPointWriter(a)
-	w := NewBatchingWriter(ttnlog.Get(), mock, scalingInterval)
-	wg := &sync.WaitGroup{}
-	expected := make(map[*influxdb.Point]bool)
-	for i := 0; i < NumEntries; i++ {
-		wg.Add(1)
-		p := &influxdb.Point{}
-		expected[p] = true
-		go func() {
-			err := w.Write(influxdb.BatchPointsConfig{}, p)
-			mock.RLock()
-			a.So(err, s.ShouldEqual, mock.results[p])
-			mock.RUnlock()
-			wg.Done()
-		}()
-	}
-	wg.Wait()
+	for _, mw := range []uint{
+		0, 1, 100,
+	} {
+		mock := newMockBatchPointWriter(a)
 
-	a.So(mock.results, s.ShouldHaveLength, len(expected))
-	for p := range expected {
-		a.So(mock.results, s.ShouldContainKey, p)
+		w := NewBatchingWriter(ttnlog.Get(), mock, WithScalingInterval(ScalingInterval), WithInstanceLimit(uint(mw)))
+
+		checkCh := make(chan struct{})
+
+		wg := &sync.WaitGroup{}
+		expected := make(map[*influxdb.Point]bool)
+		for i := 0; i < NumEntries; i++ {
+			p := &influxdb.Point{}
+			expected[p] = true
+			if i == 0 {
+				// one goroutine is spawned after the inital write, it should stay alive forever
+				err := w.Write(influxdb.BatchPointsConfig{}, p)
+				a.So(err, s.ShouldEqual, mock.results[p])
+				go func() {
+					defer leaktest.Check(t)()
+					checkCh <- struct{}{}
+					if mw < 0 {
+						<-checkCh
+						return
+					}
+
+					for {
+						select {
+						case <-time.After(ScalingInterval):
+							if mw == 0 {
+								a.So(w.active, s.ShouldEqual, 1)
+							}
+							if mw > 0 {
+								a.So(w.active, s.ShouldBeBetweenOrEqual, 1, mw+1)
+							}
+						case <-checkCh:
+							return
+						}
+					}
+				}()
+				// wait for leaktest to count active goroutines
+				<-checkCh
+				continue
+			}
+
+			wg.Add(1)
+			go func() {
+				err := w.Write(influxdb.BatchPointsConfig{}, p)
+
+				mock.RLock()
+				a.So(err, s.ShouldEqual, mock.results[p])
+				mock.RUnlock()
+				wg.Done()
+			}()
+		}
+		wg.Wait()
+		close(checkCh)
+
+		a.So(mock.results, s.ShouldHaveLength, len(expected))
+		for p := range expected {
+			a.So(mock.results, s.ShouldContainKey, p)
+		}
 	}
 }
 
