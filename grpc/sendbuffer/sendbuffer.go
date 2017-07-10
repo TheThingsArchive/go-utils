@@ -107,7 +107,6 @@ func (s *Stream) Run() (err error) {
 				s.log.WithError(err).Debug("sendbuffer: error from stream.SendMsg")
 				return err
 			}
-			s.log.Debug("sendbuffer: sent message")
 			atomic.AddUint64(&s.sent, 1)
 		}
 	}
