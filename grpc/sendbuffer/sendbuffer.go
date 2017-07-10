@@ -14,15 +14,13 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-var slack = 4
-
 // New returns a new Stream with the given buffer size and setup function.
 // If you start calling SendMsg() immediately after this, the stream will start buffering.
 // You must call Run() in a separate goroutine to actually start handling the stream.
 func New(bufferSize int, setup func() (grpc.ClientStream, error)) *Stream {
 	return &Stream{
 		setupFunc:  setup,
-		sendBuffer: make(chan interface{}, bufferSize+slack),
+		sendBuffer: make(chan interface{}, bufferSize),
 		log:        ttnlog.Get(),
 	}
 }
@@ -47,12 +45,17 @@ func (s *Stream) Stats() (sent, dropped uint64) {
 
 // SendMsg sends a message on the stream
 func (s *Stream) SendMsg(msg interface{}) {
-	if len(s.sendBuffer) > cap(s.sendBuffer)-slack {
-		atomic.AddUint64(&s.dropped, 1)
+	select {
+	case s.sendBuffer <- msg: // normal flow if the channel is not blocked
+	default:
 		s.log.Debug("sendbuffer: dropping message")
-		<-s.sendBuffer
+		<-s.sendBuffer // drop oldest and try again (if conn temporarily unavailable)
+		select {
+		case s.sendBuffer <- msg:
+		default: // drop newest (too many cuncurrent SendMsg)
+			s.log.Debug("sendbuffer: dropping message")
+		}
 	}
-	s.sendBuffer <- msg
 }
 
 // Run the stream
