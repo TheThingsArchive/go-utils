@@ -52,29 +52,28 @@ func Get(code Code) *ErrDescriptor {
 	return reg.Get(code)
 }
 
-// Descriptor returns the error descriptor from any error
-func Descriptor(err error) (desc *ErrDescriptor) {
-	var code Code
-
-	// let's hope it's an Error
-	e, ok := err.(Error)
-	if ok {
-		code = e.Code()
-		desc = Get(code)
+// From lifts an error to be and Error
+func From(in error) Error {
+	if err, ok := in.(Error); ok {
+		return err
 	}
 
-	// TODO: try to get from http or grpc errors
+	return FromGRPC(in)
+}
 
-	// if the descriptor was found, return it
-	if desc != nil {
-		return desc
+// Descriptor returns the error descriptor from any error
+func Descriptor(in error) (desc *ErrDescriptor) {
+	err := From(in)
+	descriptor := Get(err.Code())
+	if descriptor != nil {
+		return descriptor
 	}
 
 	// return a new error descriptor with sane defaults
 	return &ErrDescriptor{
 		MessageFormat: err.Error(),
-		Type:          Unknown,
-		Code:          code,
+		Type:          err.Type(),
+		Code:          err.Code(),
 	}
 }
 

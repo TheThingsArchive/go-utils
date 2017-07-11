@@ -33,15 +33,15 @@ type ErrDescriptor struct {
 
 // Format formats the attributes into an Error
 func (err *ErrDescriptor) New(attributes Attributes) Error {
-	if !err.registered {
+	if err.Code != 0 && !err.registered {
 		panic(fmt.Errorf("Error descriptor with code %v was not registered", err.Code))
 	}
 
 	return &impl{
-		message:    Format(err.MessageFormat, attributes),
-		code:       err.Code,
-		typ:        err.Type,
-		attributes: attributes,
+		Imessage:    Format(err.MessageFormat, attributes),
+		Icode:       err.Code,
+		Ityp:        err.Type,
+		Iattributes: attributes,
 	}
 }
 
