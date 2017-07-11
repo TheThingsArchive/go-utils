@@ -9,6 +9,7 @@ import (
 	ttnlog "github.com/TheThingsNetwork/go-utils/log"
 	"golang.org/x/net/context"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 )
 
 func getLog(log ttnlog.Interface) ttnlog.Interface {
@@ -61,6 +62,10 @@ func StreamServerInterceptor(log ttnlog.Interface) grpc.StreamServerInterceptor 
 		err = handler(srv, ss)
 		log = log.WithField("duration", time.Since(start))
 		if err != nil {
+			if err == context.Canceled || grpc.Code(err) == codes.Canceled {
+				log.Debug("rpc-server: stream canceled")
+				return
+			}
 			log.WithError(err).Debug("rpc-server: stream failed")
 			return
 		}
@@ -94,6 +99,10 @@ func StreamClientInterceptor(log ttnlog.Interface) grpc.StreamClientInterceptor 
 		log.Debug("rpc-client: stream starting")
 		stream, err = streamer(ctx, desc, cc, method, opts...)
 		if err != nil {
+			if err == context.Canceled || grpc.Code(err) == codes.Canceled {
+				log.Debug("rpc-client: stream canceled")
+				return
+			}
 			log.WithError(err).Debug("rpc-client: stream failed")
 			return
 		}
