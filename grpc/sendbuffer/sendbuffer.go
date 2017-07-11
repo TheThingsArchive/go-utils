@@ -49,11 +49,13 @@ func (s *Stream) SendMsg(msg interface{}) {
 	case s.sendBuffer <- msg: // normal flow if the channel is not blocked
 	default:
 		s.log.Debug("sendbuffer: dropping message")
+		atomic.AddUint64(&s.sent, 1)
 		<-s.sendBuffer // drop oldest and try again (if conn temporarily unavailable)
 		select {
 		case s.sendBuffer <- msg:
 		default: // drop newest (too many cuncurrent SendMsg)
 			s.log.Debug("sendbuffer: dropping message")
+			atomic.AddUint64(&s.sent, 1)
 		}
 	}
 }
