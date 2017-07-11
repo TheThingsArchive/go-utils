@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// Type is the type of an error which, much like gRPC Codes or HTTP Status Codes,
+// denotes what category an error belongs to and how to handle it.
 type Type uint8
 
 const (

@@ -20,5 +20,5 @@ type Error interface {
 // Code represents a unique error code
 type Code uint32
 
-// Attributes
+// Attributes is a map of attributes
 type Attributes map[string]interface{}

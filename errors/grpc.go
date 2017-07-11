@@ -47,6 +47,8 @@ func (t Type) GRPCCode() codes.Code {
 	return codes.Unknown
 }
 
+// GRPCCodeToType converts the gRPC error code to an error type or returns the
+// Unknown type if not possible.
 func GRPCCodeToType(code codes.Code) Type {
 	switch code {
 	case codes.InvalidArgument:
