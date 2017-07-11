@@ -14,12 +14,16 @@ const CodeHeader = "X-TTN-Error-Code"
 // HTTPStatusCode returns the corresponding http status code from an error type
 func (t Type) HTTPStatusCode() int {
 	switch t {
+	case Canceled:
+		return http.StatusRequestTimeout
 	case InvalidArgument:
+		return http.StatusBadRequest
 	case OutOfRange:
 		return http.StatusBadRequest
 	case NotFound:
 		return http.StatusNotFound
 	case Conflict:
+		return http.StatusConflict
 	case AlreadyExists:
 		return http.StatusConflict
 	case Unauthorized:
@@ -35,10 +39,10 @@ func (t Type) HTTPStatusCode() int {
 	case PermanentlyUnavailable:
 		return http.StatusGone
 	case ResourceExhausted:
-		return http.StatusTooManyRequests
-	case Unknown:
+		return http.StatusForbidden
 	case Internal:
-	case Canceled:
+		return http.StatusInternalServerError
+	case Unknown:
 		return http.StatusInternalServerError
 	}
 
