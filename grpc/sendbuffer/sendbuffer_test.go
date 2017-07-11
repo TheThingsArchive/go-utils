@@ -11,6 +11,8 @@ import (
 
 	. "github.com/TheThingsNetwork/go-utils/grpc/internal/test"
 	"github.com/TheThingsNetwork/go-utils/grpc/sendbuffer"
+	"github.com/TheThingsNetwork/go-utils/log"
+	"github.com/htdvisser/grpc-testing/test"
 	s "github.com/smartystreets/assertions"
 	"google.golang.org/grpc"
 )
@@ -63,6 +65,10 @@ func Example() {
 
 func TestSendBuffer(t *testing.T) {
 	a := s.New(t)
+
+	testLogger := test.NewLogger()
+	log.Set(testLogger)
+	defer testLogger.Print(t)
 
 	lis, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
