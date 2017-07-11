@@ -150,8 +150,6 @@ func (s *Stream) Run() (err error) {
 		}()
 	}()
 
-	recv := make(chan interface{})
-	defer close(recv)
 	go func() {
 		for {
 			var r interface{}
