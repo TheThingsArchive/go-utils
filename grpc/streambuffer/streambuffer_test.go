@@ -101,6 +101,7 @@ func TestStreamBuffer(t *testing.T) {
 	recv := buf.Recv(func() interface{} {
 		return new(Bar)
 	})
+	defer buf.CloseRecv()
 
 	var runReturned bool
 	var runErr error
