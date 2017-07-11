@@ -63,7 +63,7 @@ func Example() {
 	pushBuffer.SendMsg(&Foo{})
 }
 
-func TestSendBuffer(t *testing.T) {
+func TestStreamBuffer(t *testing.T) {
 	a := s.New(t)
 
 	testLogger := test.NewLogger()
