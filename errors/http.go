@@ -49,8 +49,7 @@ func (t Type) HTTPStatusCode() int {
 	return http.StatusInternalServerError
 }
 
-// HTTPStatusCode returns the HTTP status code for the given error
-// or 500 if it doesn't know
+// HTTPStatusCode returns the HTTP status code for the given error or 500 if it doesn't know
 func HTTPStatusCode(err error) int {
 	e, ok := err.(Error)
 	if ok {
@@ -125,7 +124,7 @@ func ToHTTP(in error, w http.ResponseWriter) error {
 	if err, ok := in.(Error); ok {
 		w.Header().Set(CodeHeader, err.Code().String())
 		w.WriteHeader(err.Type().HTTPStatusCode())
-		return json.NewEncoder(w).Encode(toJson(err))
+		return json.NewEncoder(w).Encode(toJSON(err))
 	}
 
 	w.WriteHeader(http.StatusInternalServerError)

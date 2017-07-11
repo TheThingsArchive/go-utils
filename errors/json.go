@@ -10,7 +10,7 @@ type jsonError struct {
 	Attributes Attributes `json:"attributes,omitempty"`
 }
 
-func toJson(err Error) *jsonError {
+func toJSON(err Error) *jsonError {
 	return &jsonError{
 		Message:    err.Error(),
 		Code:       err.Code(),
