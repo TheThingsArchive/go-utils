@@ -94,7 +94,7 @@ func StreamClientInterceptor(log ttnlog.Interface) grpc.StreamClientInterceptor 
 		log.Debug("rpc-client: stream starting")
 		stream, err = streamer(ctx, desc, cc, method, opts...)
 		if err != nil {
-			log.Debug("rpc-client: stream failed")
+			log.WithError(err).Debug("rpc-client: stream failed")
 			return
 		}
 		go func() {
