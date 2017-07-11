@@ -117,7 +117,6 @@ func FromGRPC(in error) Error {
 		return out
 	}
 
-	// Todo: find attributes
 	return got.New(out.attributes)
 }
 
