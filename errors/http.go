@@ -92,14 +92,14 @@ func FromHTTP(resp *http.Response) Error {
 
 	out := new(impl)
 
-	// try to decode the error
+	// try to decode the error from the body
 	defer resp.Body.Close()
 	err := json.NewDecoder(resp.Body).Decode(out)
 	if err == nil {
 		return out
 	}
 
-	// fall back
+	// fallback
 	out.Icode = parseCode(resp.Header.Get(CodeHeader))
 	out.Ityp = HTTPStatusToType(resp.StatusCode)
 	out.Imessage = out.Ityp.String()
