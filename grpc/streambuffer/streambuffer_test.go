@@ -37,19 +37,19 @@ func Example() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pushBuffer := streambuffer.New(5, func() (grpc.ClientStream, error) {
+	syncBuffer := streambuffer.New(5, func() (grpc.ClientStream, error) {
 		// maybe extend the context?
 		return testClient.Push(ctx)
 	})
 
-	// From now on the pushBuffer starts buffering
-	pushBuffer.SendMsg(&Foo{})
+	// From now on the syncBuffer starts buffering
+	syncBuffer.SendMsg(&Foo{})
 
 	// The Run func actually starts flushing the buffer out to the stream
 	errCh := make(chan error)
 	go func() {
 		for {
-			err := pushBuffer.Run()
+			err := syncBuffer.Run()
 			if err == nil || err == context.Canceled || errIsNotRetryable {
 				errCh <- err
 				close(errCh)
@@ -60,7 +60,7 @@ func Example() {
 	}()
 
 	// Just keep sending those messages
-	pushBuffer.SendMsg(&Foo{})
+	syncBuffer.SendMsg(&Foo{})
 }
 
 func TestStreamBuffer(t *testing.T) {
@@ -95,7 +95,11 @@ func TestStreamBuffer(t *testing.T) {
 	var setupCalled bool
 	buf := streambuffer.New(5, func() (grpc.ClientStream, error) {
 		setupCalled = true
-		return cli.Push(ctx)
+		return cli.Sync(ctx)
+	})
+
+	recv := buf.Recv(func() interface{} {
+		return new(Bar)
 	})
 
 	var runReturned bool
@@ -113,8 +117,10 @@ func TestStreamBuffer(t *testing.T) {
 	buf.SendMsg(&Foo{Foo: "foo"})
 
 	time.Sleep(sleepTime)
-	a.So(server.PushFoo, s.ShouldNotBeNil)
-	a.So(server.PushFoo.Foo, s.ShouldEqual, "foo")
+	a.So(server.SyncFoo, s.ShouldNotBeNil)
+	a.So(server.SyncFoo.Foo, s.ShouldEqual, "foo")
+	a.So(recv, s.ShouldNotBeEmpty)
+	a.So((<-recv).(*Bar).Bar, s.ShouldEqual, "foo")
 
 	cancel()
 

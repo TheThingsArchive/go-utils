@@ -1,7 +1,7 @@
 // Copyright © 2017 The Things Network
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-// Package streambuffer implements a buffered Client-Streaming RPC that drops the oldest messages on buffer overflow.
+// Package streambuffer implements a buffered streaming RPC that drops the oldest messages on buffer overflow.
 package streambuffer
 
 import (
@@ -15,27 +15,41 @@ import (
 )
 
 // New returns a new Stream with the given buffer size and setup function.
-// If you start calling SendMsg() immediately after this, the stream will start buffering.
-// You must call Run() in a separate goroutine to actually start handling the stream.
+// - You must call Run() in a separate goroutine to actually start handling the stream. Run calls setup().
+// - Your goroutine that calls Run() is responsible for handling backoff.
+// - You can start calling SendMsg() immediately after this, the stream will start buffering until the stream is started by Run().
+// - If you want to receive on the stream, Recv() must be called after New(), but before Run().
 func New(bufferSize int, setup func() (grpc.ClientStream, error)) *Stream {
 	return &Stream{
 		setupFunc:  setup,
 		sendBuffer: make(chan interface{}, bufferSize),
+		recvBuffer: make(chan interface{}, bufferSize),
 		log:        ttnlog.Get(),
 	}
 }
 
-// Stream client->server streaming rpc that buffers (at most) the last {bufferSize} messages
+// Stream implements a buffered streaming RPC
 type Stream struct {
 	// BEGIN sync/atomic aligned
-	sent    uint64
-	dropped uint64
+	sent     uint64
+	received uint64
+	dropped  uint64
 	// END sync/atomic aligned
 
 	setupFunc  func() (grpc.ClientStream, error)
+	recvFunc   func() interface{}
 	sendBuffer chan interface{}
+	recvBuffer chan interface{}
 
 	log ttnlog.Interface
+}
+
+// Recv returns a channel that receives messages form the stream
+// The given recv func should return a new proto of the type that you want to receive
+// If you want to receive, Recv() must be called BEFORE Run()
+func (s *Stream) Recv(recv func() interface{}) <-chan interface{} {
+	s.recvFunc = recv
+	return s.recvBuffer
 }
 
 // Stats of the stream
@@ -43,19 +57,36 @@ func (s *Stream) Stats() (sent, dropped uint64) {
 	return atomic.LoadUint64(&s.sent), atomic.LoadUint64(&s.dropped)
 }
 
-// SendMsg sends a message on the stream
+// SendMsg sends a message (possibly dropping a message on full buffers)
 func (s *Stream) SendMsg(msg interface{}) {
 	select {
 	case s.sendBuffer <- msg: // normal flow if the channel is not blocked
 	default:
-		s.log.Debug("streambuffer: dropping message")
+		s.log.Debug("streambuffer: dropping message before send")
 		atomic.AddUint64(&s.dropped, 1)
 		<-s.sendBuffer // drop oldest and try again (if conn temporarily unavailable)
 		select {
 		case s.sendBuffer <- msg:
 		default: // drop newest (too many cuncurrent SendMsg)
-			s.log.Debug("streambuffer: dropping message")
+			s.log.Debug("streambuffer: dropping message before send")
 			atomic.AddUint64(&s.dropped, 1)
+		}
+	}
+}
+
+// recvMsg receives a message (possibly dropping a message on full buffers)
+func (s *Stream) recvMsg(msg interface{}) {
+	select {
+	case s.recvBuffer <- msg: // normal flow if the channel is not blocked
+	default:
+		s.log.Debug("streambuffer: dropping received message")
+		atomic.AddUint64(&s.dropped, 1)
+		<-s.recvBuffer // drop oldest and try again (if application temporarily unavailable)
+		select {
+		case s.recvBuffer <- msg:
+		default: // drop newest (too many cuncurrent recvMsg)
+			atomic.AddUint64(&s.dropped, 1)
+			s.log.Debug("streambuffer: dropping received message")
 		}
 	}
 }
@@ -87,12 +118,25 @@ func (s *Stream) Run() (err error) {
 		}()
 	}()
 
+	recv := make(chan interface{})
+	defer close(recv)
 	go func() {
-		var e empty.Empty
-		err := stream.RecvMsg(&e)
-		s.log.WithError(err).Debug("streambuffer: error from stream.RecvMsg")
-		recvErr <- err
-		close(recvErr)
+		for {
+			var r interface{}
+			if s.recvFunc != nil {
+				r = s.recvFunc()
+			} else {
+				r = new(empty.Empty)
+			}
+			err := stream.RecvMsg(r)
+			if err != nil {
+				s.log.WithError(err).Debug("streambuffer: error from stream.RecvMsg")
+				recvErr <- err
+				close(recvErr)
+				return
+			}
+			s.recvMsg(r)
+		}
 	}()
 
 	defer stream.CloseSend()
