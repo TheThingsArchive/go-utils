@@ -34,8 +34,12 @@ func (t Type) HTTPStatusCode() int {
 	case PermanentlyUnavailable:
 		return http.StatusGone
 
+	case ResourceExhausted:
+		return http.StatusTooManyRequests
+
 	case Unknown:
 	case Internal:
+	case Canceled:
 		return http.StatusInternalServerError
 	}
 

@@ -55,29 +55,51 @@ const (
 	// PermanentlyUnavailable is the type of errors that result from an action
 	// that has been deprecated and is no longer available
 	PermanentlyUnavailable
-)
 
-// string representations of the Types
-// keep up to date with the iota
-var str = []string{
-	"Unknown",
-	"Internal",
-	"Invalid argument",
-	"Out of range",
-	"Not found",
-	"Conflict",
-	"Already exists",
-	"Unauthorized",
-	"Permission denied",
-	"Timeout",
-	"Not implemented",
-	"Temporarily unavailable",
-	"Permanently unavailable",
-}
+	// Canceled indicates the operation was canceled (typically by the caller)
+	Canceled
+
+	// ResourceExhausted indicates some resource has been exhausted, perhaps
+	// a per-user quota, or perhaps the entire file system is out of space.
+	ResourceExhausted
+)
 
 // String implements stringer
 func (t Type) String() string {
-	return str[t]
+	switch t {
+	case Unknown:
+		return "Unknown"
+	case Internal:
+		return "Internal"
+	case InvalidArgument:
+		return "Invalid argument"
+	case OutOfRange:
+		return "Out of range"
+	case NotFound:
+		return "Not found"
+	case Conflict:
+		return "Conflict"
+	case AlreadyExists:
+		return "Already exists"
+	case Unauthorized:
+		return "Unauthorized"
+	case PermissionDenied:
+		return "Permission denied"
+	case Timeout:
+		return "Timeout"
+	case NotImplemented:
+		return "Not implemented"
+	case TemporarilyUnavailable:
+		return "Temporarily unavailable"
+	case PermanentlyUnavailable:
+		return "Permanently unavailable"
+	case Canceled:
+		return "Canceled"
+	case ResourceExhausted:
+		return "Resource exhausted"
+	default:
+		return "Unknown"
+	}
 }
 
 // MarshalText implements TextMarsheler
@@ -87,13 +109,50 @@ func (t Type) MarshalText() ([]byte, error) {
 
 // UnmarshalText implements TextUnmarsheler
 func (t *Type) UnmarshalText(text []byte) error {
-	enum := strings.ToLower(string(text))
-	for i, typ := range str {
-		if enum == strings.ToLower(typ) {
-			*t = Type(i)
-			return nil
-		}
+	e, err := fromString(string(text))
+	if err != nil {
+		return err
 	}
 
-	return fmt.Errorf("Invalid event type")
+	*t = e
+
+	return nil
+}
+
+func fromString(str string) (Type, error) {
+	enum := strings.ToLower(str)
+	switch enum {
+	case "unknown":
+		return Unknown, nil
+	case "internal":
+		return Internal, nil
+	case "invalid argument":
+		return InvalidArgument, nil
+	case "out of range":
+		return OutOfRange, nil
+	case "not found":
+		return NotFound, nil
+	case "conflict":
+		return Conflict, nil
+	case "already exists":
+		return AlreadyExists, nil
+	case "unauthorized":
+		return Unauthorized, nil
+	case "permission denied":
+		return PermissionDenied, nil
+	case "timeout":
+		return Timeout, nil
+	case "not implemented":
+		return NotImplemented, nil
+	case "temporarily unavailable":
+		return TemporarilyUnavailable, nil
+	case "permanently unavailable":
+		return PermanentlyUnavailable, nil
+	case "canceled":
+		return Canceled, nil
+	case "resource exhausted":
+		return ResourceExhausted, nil
+	default:
+		return Unknown, fmt.Errorf("Invalid event type")
+	}
 }
