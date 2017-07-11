@@ -1,8 +1,8 @@
 // Copyright © 2017 The Things Network
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-// Package sendbuffer implements a buffered Client-Streaming RPC that drops the oldest messages on buffer overflow.
-package sendbuffer
+// Package streambuffer implements a buffered Client-Streaming RPC that drops the oldest messages on buffer overflow.
+package streambuffer
 
 import (
 	"context"
@@ -48,13 +48,13 @@ func (s *Stream) SendMsg(msg interface{}) {
 	select {
 	case s.sendBuffer <- msg: // normal flow if the channel is not blocked
 	default:
-		s.log.Debug("sendbuffer: dropping message")
+		s.log.Debug("streambuffer: dropping message")
 		atomic.AddUint64(&s.sent, 1)
 		<-s.sendBuffer // drop oldest and try again (if conn temporarily unavailable)
 		select {
 		case s.sendBuffer <- msg:
 		default: // drop newest (too many cuncurrent SendMsg)
-			s.log.Debug("sendbuffer: dropping message")
+			s.log.Debug("streambuffer: dropping message")
 			atomic.AddUint64(&s.sent, 1)
 		}
 	}
@@ -90,7 +90,7 @@ func (s *Stream) Run() (err error) {
 	go func() {
 		var e empty.Empty
 		err := stream.RecvMsg(&e)
-		s.log.WithError(err).Debug("sendbuffer: error from stream.RecvMsg")
+		s.log.WithError(err).Debug("streambuffer: error from stream.RecvMsg")
 		recvErr <- err
 		close(recvErr)
 	}()
@@ -102,11 +102,11 @@ func (s *Stream) Run() (err error) {
 		case err := <-recvErr:
 			return err
 		case <-stream.Context().Done():
-			s.log.WithError(stream.Context().Err()).Debug("sendbuffer: context done")
+			s.log.WithError(stream.Context().Err()).Debug("streambuffer: context done")
 			return stream.Context().Err()
 		case msg := <-s.sendBuffer:
 			if err = stream.SendMsg(msg); err != nil {
-				s.log.WithError(err).Debug("sendbuffer: error from stream.SendMsg")
+				s.log.WithError(err).Debug("streambuffer: error from stream.SendMsg")
 				return err
 			}
 			atomic.AddUint64(&s.sent, 1)

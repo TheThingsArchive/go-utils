@@ -1,7 +1,7 @@
 // Copyright © 2017 The Things Network
 // Use of this source code is governed by the MIT license that can be found in the LICENSE file.
 
-package sendbuffer_test
+package streambuffer_test
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"time"
 
 	. "github.com/TheThingsNetwork/go-utils/grpc/internal/test"
-	"github.com/TheThingsNetwork/go-utils/grpc/sendbuffer"
+	"github.com/TheThingsNetwork/go-utils/grpc/streambuffer"
 	"github.com/TheThingsNetwork/go-utils/log"
 	"github.com/htdvisser/grpc-testing/test"
 	s "github.com/smartystreets/assertions"
@@ -37,7 +37,7 @@ func Example() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	pushBuffer := sendbuffer.New(5, func() (grpc.ClientStream, error) {
+	pushBuffer := streambuffer.New(5, func() (grpc.ClientStream, error) {
 		// maybe extend the context?
 		return testClient.Push(ctx)
 	})
@@ -93,7 +93,7 @@ func TestSendBuffer(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	var setupCalled bool
-	buf := sendbuffer.New(5, func() (grpc.ClientStream, error) {
+	buf := streambuffer.New(5, func() (grpc.ClientStream, error) {
 		setupCalled = true
 		return cli.Push(ctx)
 	})
