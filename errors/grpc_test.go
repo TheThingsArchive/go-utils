@@ -7,10 +7,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/smartystreets/assertions"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
-
-	"github.com/smartystreets/assertions"
 )
 
 func TestGRPC(t *testing.T) {
