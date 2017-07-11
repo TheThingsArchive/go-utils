@@ -41,10 +41,10 @@ func (err *ErrDescriptor) New(attributes Attributes) Error {
 	}
 
 	return &impl{
-		Imessage:    Format(err.MessageFormat, attributes),
-		Icode:       err.Code,
-		Ityp:        err.Type,
-		Iattributes: attributes,
+		message:    Format(err.MessageFormat, attributes),
+		code:       err.Code,
+		typ:        err.Type,
+		attributes: attributes,
 	}
 }
 

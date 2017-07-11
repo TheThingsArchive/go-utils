@@ -95,9 +95,9 @@ var format = "%s (e:%v) attributes = %s"
 // FromGRPC parses a gRPC error and returns an Error
 func FromGRPC(in error) Error {
 	out := &impl{
-		Imessage: grpc.ErrorDesc(in),
-		Ityp:     GRPCCodeToType(grpc.Code(in)),
-		Icode:    Code(0),
+		message: grpc.ErrorDesc(in),
+		typ:     GRPCCodeToType(grpc.Code(in)),
+		code:    Code(0),
 	}
 
 	matches := regex.FindStringSubmatch(in.Error())
@@ -106,18 +106,17 @@ func FromGRPC(in error) Error {
 		return out
 	}
 
-	// set message
-	out.Imessage = matches[1]
-	out.Icode = parseCode(matches[2])
-	_ = json.Unmarshal([]byte(matches[3]), &out.Iattributes)
+	out.message = matches[1]
+	out.code = parseCode(matches[2])
+	_ = json.Unmarshal([]byte(matches[3]), &out.attributes)
 
-	got := Get(Code(out.Icode))
+	got := Get(Code(out.code))
 	if got == nil {
 		return out
 	}
 
 	// Todo: find attributes
-	return got.New(out.Iattributes)
+	return got.New(out.attributes)
 }
 
 // ToGRPC turns an error into a gRPC error

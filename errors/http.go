@@ -93,19 +93,24 @@ func FromHTTP(resp *http.Response) Error {
 		return nil
 	}
 
-	out := new(impl)
+	typ := HTTPStatusToType(resp.StatusCode)
+
+	out := &impl{
+		message: typ.String(),
+		code:    parseCode(resp.Header.Get(CodeHeader)),
+		typ:     typ,
+	}
 
 	// try to decode the error from the body
 	defer resp.Body.Close()
-	err := json.NewDecoder(resp.Body).Decode(out)
+	j := new(jsonError)
+	err := json.NewDecoder(resp.Body).Decode(j)
 	if err == nil {
-		return out
+		out.message = j.Message
+		out.code = j.Code
+		out.typ = j.Type
+		out.attributes = j.Attributes
 	}
-
-	// fallback
-	out.Icode = parseCode(resp.Header.Get(CodeHeader))
-	out.Ityp = HTTPStatusToType(resp.StatusCode)
-	out.Imessage = out.Ityp.String()
 
 	return out
 }
@@ -116,12 +121,12 @@ func ToHTTP(in error, w http.ResponseWriter) error {
 	if err, ok := in.(Error); ok {
 		w.Header().Set(CodeHeader, err.Code().String())
 		w.WriteHeader(err.Type().HTTPStatusCode())
-		return json.NewEncoder(w).Encode(toImpl(err))
+		return json.NewEncoder(w).Encode(toJson(err))
 	}
 
 	w.WriteHeader(http.StatusInternalServerError)
-	return json.NewEncoder(w).Encode(&impl{
-		Imessage: in.Error(),
-		Ityp:     Unknown,
+	return json.NewEncoder(w).Encode(&jsonError{
+		Message: in.Error(),
+		Type:    Unknown,
 	})
 }
