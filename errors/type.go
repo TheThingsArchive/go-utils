@@ -122,6 +122,8 @@ func (t *Type) UnmarshalText(text []byte) error {
 	return nil
 }
 
+// fromString parses a string into an error type. If the type is invalid, the
+// Unknown type will be returned as well as an error.
 func fromString(str string) (Type, error) {
 	enum := strings.ToLower(str)
 	switch enum {
@@ -156,6 +158,6 @@ func fromString(str string) (Type, error) {
 	case "resource exhausted":
 		return ResourceExhausted, nil
 	default:
-		return Unknown, fmt.Errorf("Invalid event type")
+		return Unknown, fmt.Errorf("Invalid error type")
 	}
 }
