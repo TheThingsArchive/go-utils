@@ -91,7 +91,7 @@ func GRPCCode(err error) codes.Code {
 	return grpc.Code(err)
 }
 
-var regex = regexp.MustCompile(`.*desc = (.*) \(e:(\d+)\) attributes = (.*)`)
+var grpcMessageFormat = regexp.MustCompile(`.*desc = (.*) \(e:(\d+)\) attributes = (.*)`)
 var format = "%s (e:%v) attributes = %s"
 
 // FromGRPC parses a gRPC error and returns an Error
@@ -102,7 +102,7 @@ func FromGRPC(in error) Error {
 		code:    Code(0),
 	}
 
-	matches := regex.FindStringSubmatch(in.Error())
+	matches := grpcMessageFormat.FindStringSubmatch(in.Error())
 
 	if len(matches) < 4 {
 		return out
