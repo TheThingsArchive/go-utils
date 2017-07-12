@@ -50,6 +50,13 @@ type Stream struct {
 	log ttnlog.Interface
 }
 
+// SetLogger sets the logger for this streambuffer
+func (s *Stream) SetLogger(log ttnlog.Interface) {
+	s.mu.Lock()
+	s.log = log
+	s.mu.Unlock()
+}
+
 // Recv returns a buffered channel (of the size given to New) that receives messages from the stream.
 // The given recv func should return a new proto of the type that you want to receive
 // If you want to receive, Recv() must be called BEFORE Run()
@@ -128,10 +135,12 @@ func (s *Stream) Run() (err error) {
 	defer func() {
 		if err != nil {
 			if grpc.Code(err) == codes.Canceled {
+				s.log.Debug("streambuffer: context canceled")
 				err = context.Canceled
 				return
 			}
 			if grpc.Code(err) == codes.DeadlineExceeded {
+				s.log.Debug("streambuffer: context deadline exceeded")
 				err = context.DeadlineExceeded
 				return
 			}
@@ -140,6 +149,7 @@ func (s *Stream) Run() (err error) {
 
 	stream, err := s.setupFunc()
 	if err != nil {
+		s.log.WithError(err).Debug("streambuffer: setup returned error")
 		return err
 	}
 
