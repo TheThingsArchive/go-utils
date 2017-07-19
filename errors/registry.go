@@ -38,6 +38,15 @@ func (r *registry) Get(code Code) *ErrDescriptor {
 	return r.byCode[code]
 }
 
+// GetAll returns all registered error descriptors
+func (r *registry) GetAll() []*ErrDescriptor {
+	res := make([]*ErrDescriptor, 0, len(r.byCode))
+	for _, d := range r.byCode {
+		res = append(res, d)
+	}
+	return res
+}
+
 // reg is a global registry to be shared by packages
 var reg = &registry{
 	byCode: make(map[Code]*ErrDescriptor),
@@ -106,4 +115,9 @@ func GetAttributes(err error) Attributes {
 	}
 
 	return Attributes{}
+}
+
+// GetAll returns all registered error descriptors
+func GetAll() []*ErrDescriptor {
+	return reg.GetAll()
 }
