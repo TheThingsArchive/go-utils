@@ -40,6 +40,9 @@ func (r *registry) Get(code Code) *ErrDescriptor {
 
 // GetAll returns all registered error descriptors
 func (r *registry) GetAll() []*ErrDescriptor {
+	r.RLock()
+	defer r.RUnlock()
+
 	res := make([]*ErrDescriptor, 0, len(r.byCode))
 	for _, d := range r.byCode {
 		res = append(res, d)
