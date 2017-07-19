@@ -16,7 +16,7 @@ func TestGRPC(t *testing.T) {
 	a := assertions.New(t)
 	d := &ErrDescriptor{
 		MessageFormat: "You do not have access to app with id {app_id}",
-		Code:          77,
+		Code:          code(77),
 		Type:          PermissionDenied,
 		registered:    true,
 	}
@@ -54,7 +54,7 @@ func TestFromUnspecifiedGRPC(t *testing.T) {
 	err := grpc.Errorf(codes.DeadlineExceeded, "This is an error")
 
 	got := FromGRPC(err)
-	a.So(got.Code(), assertions.ShouldEqual, 0)
+	a.So(got.Code(), assertions.ShouldEqual, NoCode)
 	a.So(got.Type(), assertions.ShouldEqual, Timeout)
 	a.So(got.Error(), assertions.ShouldEqual, "This is an error")
 	a.So(got.Attributes(), assertions.ShouldBeNil)

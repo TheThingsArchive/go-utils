@@ -11,12 +11,15 @@ import (
 	"github.com/smartystreets/assertions"
 )
 
+// code creates Codes for testing
+var code = Range(10000, 11000)
+
 func TestHTTP(t *testing.T) {
 	a := assertions.New(t)
 
 	d := &ErrDescriptor{
 		MessageFormat: "You do not have access to app with id {app_id}",
-		Code:          77,
+		Code:          code(77),
 		Type:          PermissionDenied,
 		registered:    true,
 	}
@@ -54,7 +57,7 @@ func TestToUnspecifiedHTTP(t *testing.T) {
 	resp := w.Result()
 
 	got := FromHTTP(resp)
-	a.So(got.Code(), assertions.ShouldEqual, Code(0))
+	a.So(got.Code(), assertions.ShouldEqual, NoCode)
 	a.So(got.Type(), assertions.ShouldEqual, Unknown)
 	a.So(got.Error(), assertions.ShouldEqual, err.Error())
 	a.So(got.Attributes(), assertions.ShouldBeNil)

@@ -36,7 +36,7 @@ type ErrDescriptor struct {
 
 // New creates a new error based on the error descriptor
 func (err *ErrDescriptor) New(attributes Attributes) Error {
-	if err.Code != 0 && !err.registered {
+	if err.Code != NoCode && !err.registered {
 		panic(fmt.Errorf("Error descriptor with code %v was not registered", err.Code))
 	}
 

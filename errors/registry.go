@@ -19,7 +19,7 @@ func (r *registry) Register(err *ErrDescriptor) {
 	r.Lock()
 	defer r.Unlock()
 
-	if err.Code == 0 {
+	if err.Code == NoCode {
 		panic(fmt.Errorf("No code defined in error descriptor (message: `%s`)", err.MessageFormat))
 	}
 

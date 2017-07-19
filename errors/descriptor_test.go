@@ -14,7 +14,7 @@ func TestDescriptor(t *testing.T) {
 
 	d := &ErrDescriptor{
 		MessageFormat: "You do not have access to app with id {app_id}",
-		Code:          77,
+		Code:          code(77),
 		Type:          PermissionDenied,
 		registered:    true,
 	}
