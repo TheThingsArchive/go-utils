@@ -38,7 +38,7 @@ func NewTestServer() *TestServerImplementation {
 }
 
 func (s *TestServerImplementation) req(ctx context.Context) {
-	if md, ok := metadata.FromContext(ctx); ok {
+	if md, ok := metadata.FromIncomingContext(ctx); ok {
 		if token, ok := md["token"]; ok && len(token) > 0 {
 			s.Token = token[0]
 			return

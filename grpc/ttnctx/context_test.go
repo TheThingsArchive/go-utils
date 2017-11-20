@@ -22,7 +22,7 @@ func TestContext(t *testing.T) {
 		md := MetadataFromIncomingContext(ctx)
 		a.So(md, ShouldHaveLength, 0)
 
-		ctx = metadata.NewContext(ctx, metadata.Pairs())
+		ctx = metadata.NewOutgoingContext(ctx, metadata.Pairs())
 
 		md = MetadataFromIncomingContext(ctx)
 		a.So(md, ShouldHaveLength, 0)
@@ -101,7 +101,7 @@ func TestContext(t *testing.T) {
 	}
 
 	{
-		ctx := OutgoingContextWithLimitAndOffset(metadata.NewContext(context.Background(), metadata.Pairs()), 0, 0)
+		ctx := OutgoingContextWithLimitAndOffset(metadata.NewOutgoingContext(context.Background(), metadata.Pairs()), 0, 0)
 		limit, err := LimitFromMetadata(MetadataFromOutgoingContext(ctx))
 		a.So(err, ShouldBeNil)
 		a.So(limit, ShouldEqual, 0)
