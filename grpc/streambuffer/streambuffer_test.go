@@ -12,7 +12,7 @@ import (
 	. "github.com/TheThingsNetwork/go-utils/grpc/internal/test"
 	"github.com/TheThingsNetwork/go-utils/grpc/streambuffer"
 	"github.com/TheThingsNetwork/go-utils/log"
-	"github.com/htdvisser/grpc-testing/test"
+	"github.com/TheThingsNetwork/go-utils/log/test"
 	s "github.com/smartystreets/assertions"
 	"google.golang.org/grpc"
 )
