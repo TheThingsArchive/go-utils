@@ -1,8 +1,8 @@
 package logrus
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/TheThingsNetwork/go-utils/log"
+	"github.com/sirupsen/logrus"
 )
 
 // StandardLogrus wraps the standard Logrus Logger into a Logger

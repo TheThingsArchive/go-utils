@@ -5,6 +5,7 @@ package influx
 
 import (
 	"errors"
+	"math/rand"
 	"os"
 	"sync"
 	"testing"
@@ -13,7 +14,6 @@ import (
 	"github.com/TheThingsNetwork/go-utils/handlers/cli"
 	ttnlog "github.com/TheThingsNetwork/go-utils/log"
 	ttnapex "github.com/TheThingsNetwork/go-utils/log/apex"
-	"github.com/TheThingsNetwork/ttn/utils/random"
 	apex "github.com/apex/log"
 	"github.com/fortytw2/leaktest"
 	influxdb "github.com/influxdata/influxdb/client/v2"
@@ -44,7 +44,7 @@ func newMockBatchPointWriter(a *s.Assertion) *MockBatchPointWriter {
 func (w *MockBatchPointWriter) Write(bp influxdb.BatchPoints) error {
 	time.Sleep(ScalingInterval)
 	var err error
-	if random.Bool() {
+	if rand.Intn(2) < 1 {
 		err = errors.New("test")
 	}
 	for _, p := range bp.Points() {
