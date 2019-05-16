@@ -6,7 +6,15 @@ services:
   - docker
 
 go:
-  - 1.8
+- '1.11.x'
+- '1.12.x'
+
+go_import_path: github.com/TheThingsNetwork/go-utils
+
+env:
+  global:
+  - GOPROXY=https://proxy.golang.org
+  - GO111MODULE=on
 
 before_script:
   - docker run -d -p 127.0.0.1:6379:6379 redis
