@@ -56,23 +56,23 @@ func (p prom) Fatal(msg string) {
 }
 func (p prom) Debugf(msg string, v ...interface{}) {
 	logCounter.WithLabelValues(debug).Inc()
-	p.Interface.Debugf(msg, v)
+	p.Interface.Debugf(msg, v...)
 }
 func (p prom) Infof(msg string, v ...interface{}) {
 	logCounter.WithLabelValues(info).Inc()
-	p.Interface.Infof(msg, v)
+	p.Interface.Infof(msg, v...)
 }
 func (p prom) Warnf(msg string, v ...interface{}) {
 	logCounter.WithLabelValues(warn).Inc()
-	p.Interface.Warnf(msg, v)
+	p.Interface.Warnf(msg, v...)
 }
 func (p prom) Errorf(msg string, v ...interface{}) {
 	logCounter.WithLabelValues(err).Inc()
-	p.Interface.Errorf(msg, v)
+	p.Interface.Errorf(msg, v...)
 }
 func (p prom) Fatalf(msg string, v ...interface{}) {
 	logCounter.WithLabelValues(fatal).Inc()
-	p.Interface.Fatalf(msg, v)
+	p.Interface.Fatalf(msg, v...)
 }
 func (p prom) WithField(k string, v interface{}) log.Interface {
 	return prom{p.Interface.WithField(k, v)}
