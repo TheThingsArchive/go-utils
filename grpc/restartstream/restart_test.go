@@ -12,7 +12,7 @@ import (
 	. "github.com/TheThingsNetwork/go-utils/grpc/internal/test"
 	"github.com/TheThingsNetwork/go-utils/log"
 	"github.com/TheThingsNetwork/go-utils/log/test"
-	grpc_middleware "github.com/mwitkow/go-grpc-middleware"
+	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	. "github.com/smartystreets/assertions"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"

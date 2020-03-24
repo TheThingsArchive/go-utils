@@ -1,30 +1,35 @@
 module github.com/TheThingsNetwork/go-utils
 
-go 1.11
+go 1.14
 
 require (
-	github.com/apex/log v1.1.0
+	github.com/apex/log v1.1.2
 	github.com/fatih/structs v1.1.0
 	github.com/fortytw2/leaktest v1.3.0
-	github.com/go-logfmt/logfmt v0.4.0 // indirect
-	github.com/gogo/protobuf v1.2.1
-	github.com/golang/protobuf v1.3.1
+	github.com/go-logfmt/logfmt v0.5.0 // indirect
+	github.com/gogo/protobuf v1.3.1
+	github.com/golang/protobuf v1.3.5
+	github.com/gopherjs/gopherjs v0.0.0-20200217142428-fce0ec30dd00 // indirect
 	github.com/gotnospirit/makeplural v0.0.0-20180622080156-a5f48d94d976 // indirect
-	github.com/gotnospirit/messageformat v0.0.0-20180622080451-0eab1176a3fb
+	github.com/gotnospirit/messageformat v0.0.0-20190719172517-c1d0bdacdea2
+	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
 	github.com/influxdata/influxdb v1.7.6
-	github.com/mwitkow/go-grpc-middleware v1.0.0
-	github.com/onsi/ginkgo v1.8.0 // indirect
-	github.com/onsi/gomega v1.5.0 // indirect
-	github.com/pkg/errors v0.8.1 // indirect
-	github.com/prometheus/client_golang v0.9.2
-	github.com/prometheus/client_model v0.0.0-20190129233127-fd36f4220a90
-	github.com/sirupsen/logrus v1.4.1
-	github.com/smartystreets/assertions v0.0.0-20190401211740-f487f9de1cd3
-	github.com/smartystreets/go-aws-auth v0.0.0-20180515143844-0c1422d1fdb9 // indirect
-	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a
-	github.com/smartystreets/gunit v0.0.0-20190426220047-d9c9211acd48 // indirect
+	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
+	github.com/onsi/ginkgo v1.12.0 // indirect
+	github.com/onsi/gomega v1.9.0 // indirect
+	github.com/pkg/errors v0.9.1 // indirect
+	github.com/prometheus/client_golang v1.5.1
+	github.com/prometheus/client_model v0.2.0
+	github.com/sirupsen/logrus v1.5.0
+	github.com/smartystreets/assertions v1.0.1
+	github.com/smartystreets/goconvey v1.6.4
+	github.com/smartystreets/gunit v1.1.3 // indirect
 	github.com/tj/go-elastic v0.0.0-20171221160941-36157cbbebc2
-	golang.org/x/net v0.0.0-20190514140710-3ec191127204
-	google.golang.org/grpc v1.20.1
+	golang.org/x/net v0.0.0-20200320220750-118fecf932d8
+	golang.org/x/sys v0.0.0-20200323222414-85ca7c5b95cd // indirect
+	golang.org/x/text v0.3.2 // indirect
+	google.golang.org/genproto v0.0.0-20200323114720-3f67cca34472 // indirect
+	google.golang.org/grpc v1.28.0
 	gopkg.in/redis.v5 v5.2.9
+	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
