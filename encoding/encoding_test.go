@@ -4,7 +4,6 @@
 package encoding
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"math"

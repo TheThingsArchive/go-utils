@@ -14,6 +14,7 @@ require (
 	github.com/gotnospirit/messageformat v0.0.0-20190719172517-c1d0bdacdea2
 	github.com/grpc-ecosystem/go-grpc-middleware v1.2.0
 	github.com/influxdata/influxdb v1.7.6
+	github.com/json-iterator/go v1.1.9
 	github.com/konsorten/go-windows-terminal-sequences v1.0.2 // indirect
 	github.com/onsi/ginkgo v1.12.0 // indirect
 	github.com/onsi/gomega v1.9.0 // indirect

@@ -4,3 +4,7 @@
 // Package encoding is responsible for encoding and decoding of structs.
 // `squash` option assumes that field names are unique in structs, otherwise results are unpredictable
 package encoding
+
+import jsoniter "github.com/json-iterator/go"
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
