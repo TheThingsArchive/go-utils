@@ -5,7 +5,7 @@ package encoding
 
 import (
 	"encoding"
-	"encoding/json"
+	stdjson "encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -69,7 +69,7 @@ func unmarshalToType(typ reflect.Type, value string) (val interface{}, err error
 			return val, nil
 		}
 	}
-	if um, ok := val.(json.Unmarshaler); ok {
+	if um, ok := val.(stdjson.Unmarshaler); ok {
 		if err = um.UnmarshalJSON([]byte(value)); err == nil {
 			return val, nil
 		}

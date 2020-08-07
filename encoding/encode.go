@@ -5,7 +5,7 @@ package encoding
 
 import (
 	"encoding"
-	"encoding/json"
+	stdjson "encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -176,7 +176,7 @@ func ToStringStringMap(tagName string, input interface{}, properties ...string) 
 				vmap.Set(fieldName, string(txt))
 				continue
 			}
-			if m, ok := val.(json.Marshaler); ok {
+			if m, ok := val.(stdjson.Marshaler); ok {
 				txt, err := m.MarshalJSON()
 				if err != nil {
 					return nil, err
